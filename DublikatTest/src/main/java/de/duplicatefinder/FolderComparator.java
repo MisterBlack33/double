@@ -1,0 +1,306 @@
+package de.duplicatefinder;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.stream.Stream;
+
+/**
+ * Vergleicht zwei Ordner nach der 8-Fall-Spezifikation (byte-basiert)
+ * und ergänzt für Bilder einen optionalen pHash-Vergleich.
+ *
+ * <h3>Byte-Vergleich (alle Dateitypen)</h3>
+ * <pre>
+ *  Fall  Name  Inhalt  Größe  → MatchStatus
+ *   1     =      =      =     DUPLICATE
+ *   2     =      =      ≠     NEEDS_REVIEW
+ *   3     =      ≠      =     CONFLICT
+ *   4     =      ≠      ≠     DIFFERENT  (ignoriert)
+ *   5     ≠      =      =     NEEDS_REVIEW
+ *   6     ≠      =      ≠     NEEDS_REVIEW
+ *   7     ≠      ≠      =     DIFFERENT
+ *   8     ≠      ≠      ≠     DIFFERENT
+ * </pre>
+ *
+ * <h3>pHash-Erweiterung (nur Bilder)</h3>
+ * Fälle 3, 4, 7, 8 (byte-basiert DIFFERENT/CONFLICT) werden für Bilddateien
+ * zusätzlich per pHash verglichen. Ergibt sich eine visuelle Ähnlichkeit,
+ * wird der Eintrag als VISUAL_* statt DIFFERENT/CONFLICT gewertet.
+ *
+ * Ebenso werden Bildpaare aus verschiedenen Formaten (z.B. .jpg vs .png)
+ * per pHash verglichen und als VISUAL_* gemeldet.
+ */
+public class FolderComparator {
+
+    private static final int BUF = 65_536;
+
+    /**
+     * Vergleicht Quell- und Zielordner vollständig.
+     *
+     * @param sourceDir        Quellordner
+     * @param targetDir        Zielordner
+     * @param visualCompare    wenn true, pHash-Vergleich für Bilder aktivieren
+     * @param progressCallback optional: (fertig, gesamt) → void
+     */
+    public FolderSyncResult compare(Path sourceDir, Path targetDir,
+                                    boolean visualCompare,
+                                    BiConsumer<Integer, Integer> progressCallback)
+            throws IOException {
+
+        // ── Dateien einlesen ──────────────────────────────────────────────────
+        Map<Path, Path> srcMap = collectFiles(sourceDir);   // relPath → absPath
+        Map<Path, Path> tgtMap = collectFiles(targetDir);
+
+        // SHA-256-Index aller Zieldateien: hash → Liste von Pfaden
+        Map<String, List<Path>> tgtByHash = buildHashIndex(tgtMap.values(),
+                (d, t) -> {
+                    if (progressCallback != null)
+                        progressCallback.accept(d, t + srcMap.size());
+                });
+
+        // pHash-Index aller Bild-Zieldateien: pHash → Liste von Pfaden
+        Map<Long, List<Path>> tgtByPHash = visualCompare
+                ? buildPHashIndex(tgtMap.values(),
+                (d, t) -> {
+                    if (progressCallback != null)
+                        progressCallback.accept(tgtMap.size() + d,
+                                tgtMap.size() + srcMap.size());
+                })
+                : Collections.emptyMap();
+
+        List<FolderSyncResult.FileEntry> entries = new ArrayList<>();
+        int differentCount = 0;
+        int total = srcMap.size(), done = 0;
+
+        for (Map.Entry<Path, Path> srcEntry : srcMap.entrySet()) {
+            Path relSrc  = srcEntry.getKey();
+            Path absSrc  = srcEntry.getValue();
+            long sizeSrc = safeSize(absSrc);
+            boolean srcIsImage = visualCompare && PerceptualHasher.isImage(absSrc);
+
+            done++;
+            if (progressCallback != null)
+                progressCallback.accept(tgtMap.size() + done, tgtMap.size() + total);
+
+            boolean nameMatch = tgtMap.containsKey(relSrc);
+            Path    absTgt    = nameMatch ? tgtMap.get(relSrc) : null;
+            long    sizeTgt   = absTgt != null ? safeSize(absTgt) : -1;
+
+            if (nameMatch) {
+                // ── Fälle 1–4: gleicher rel. Pfad ────────────────────────────
+                String hashSrc    = sha256(absSrc);
+                String hashTgt    = sha256(absTgt);
+                boolean contentEq = hashSrc.equals(hashTgt);
+                boolean sizeEq    = sizeSrc == sizeTgt;
+
+                if (contentEq && sizeEq) {
+                    // Fall 1 → DUPLICATE
+                    entries.add(entry(absSrc, absTgt, sizeSrc, sizeTgt,
+                            FolderSyncResult.MatchStatus.DUPLICATE, -1));
+
+                } else if (contentEq) {
+                    // Fall 2 → NEEDS_REVIEW
+                    entries.add(entry(absSrc, absTgt, sizeSrc, sizeTgt,
+                            FolderSyncResult.MatchStatus.NEEDS_REVIEW, -1));
+
+                } else if (sizeEq) {
+                    // Fall 3: Name= Inhalt≠ Größe= → CONFLICT (oder visuell?)
+                    FolderSyncResult.FileEntry ve =
+                            srcIsImage && PerceptualHasher.isImage(absTgt)
+                                    ? visualEntry(absSrc, absTgt, sizeSrc, sizeTgt)
+                                    : null;
+                    if (ve != null && ve.isVisualMatch()) entries.add(ve);
+                    else {
+                        entries.add(entry(absSrc, absTgt, sizeSrc, sizeTgt,
+                                FolderSyncResult.MatchStatus.CONFLICT, -1));
+                    }
+
+                } else {
+                    // Fall 4: Name= Inhalt≠ Größe≠ → normalerweise ignoriert
+                    // Für Bilder: trotzdem pHash-Check
+                    if (srcIsImage && PerceptualHasher.isImage(absTgt)) {
+                        FolderSyncResult.FileEntry ve =
+                                visualEntry(absSrc, absTgt, sizeSrc, sizeTgt);
+                        if (ve != null && ve.isVisualMatch()) { entries.add(ve); continue; }
+                    }
+                    differentCount++;
+                }
+
+            } else {
+                // ── Fälle 5–8: Name ungleich ─────────────────────────────────
+                String hashSrc = sha256(absSrc);
+                List<Path> byteMatches = tgtByHash.getOrDefault(hashSrc, Collections.emptyList());
+
+                if (!byteMatches.isEmpty()) {
+                    // Inhalt (byte) gleich → Fälle 5 oder 6
+                    for (Path match : byteMatches) {
+                        entries.add(entry(absSrc, match, sizeSrc, safeSize(match),
+                                FolderSyncResult.MatchStatus.NEEDS_REVIEW, -1));
+                    }
+                } else if (srcIsImage) {
+                    // Kein Byte-Treffer, aber Bild → pHash-Suche im Ziel
+                    FolderSyncResult.FileEntry best = findBestVisualMatch(
+                            absSrc, sizeSrc, tgtByPHash);
+                    if (best != null) entries.add(best);
+                    else              differentCount++;
+                } else {
+                    // Fälle 7 + 8: kein Treffer, kein Bild
+                    differentCount++;
+                }
+            }
+        }
+
+        // Sortierung: DUPLICATE → NEEDS_REVIEW → CONFLICT → VISUAL_*
+        entries.sort(Comparator.comparingInt(e -> statusOrder(e.getStatus())));
+
+        return new FolderSyncResult(sourceDir, targetDir, entries,
+                srcMap.size(), tgtMap.size(), differentCount);
+    }
+
+    // ── pHash-Vergleich ───────────────────────────────────────────────────────
+
+    /**
+     * Vergleicht zwei Bilddateien per pHash und gibt einen FileEntry zurück,
+     * oder null wenn pHash nicht berechnet werden konnte.
+     */
+    private FolderSyncResult.FileEntry visualEntry(Path src, Path tgt,
+                                                   long sizeSrc, long sizeTgt) {
+        try {
+            long hashSrc = PerceptualHasher.hash(src);
+            long hashTgt = PerceptualHasher.hash(tgt);
+            int  dist    = PerceptualHasher.hammingDistance(hashSrc, hashTgt);
+            PerceptualHasher.Similarity sim = PerceptualHasher.similarity(hashSrc, hashTgt);
+            FolderSyncResult.MatchStatus ms = similarityToStatus(sim);
+            if (ms == null) return null;
+            return entry(src, tgt, sizeSrc, sizeTgt, ms, dist);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Sucht im pHash-Index des Zielordners nach dem besten visuellen Treffer
+     * für eine Quelldatei. Wählt den Eintrag mit der kleinsten Hamming-Distanz.
+     */
+    private FolderSyncResult.FileEntry findBestVisualMatch(Path src, long sizeSrc,
+                                                           Map<Long, List<Path>> tgtByPHash) {
+        try {
+            long srcHash = PerceptualHasher.hash(src);
+            int bestDist = Integer.MAX_VALUE;
+            Path bestMatch = null;
+
+            for (Map.Entry<Long, List<Path>> e : tgtByPHash.entrySet()) {
+                int dist = PerceptualHasher.hammingDistance(srcHash, e.getKey());
+                if (dist < bestDist && dist <= 15) {
+                    bestDist = dist;
+                    bestMatch = e.getValue().get(0);
+                }
+            }
+
+            if (bestMatch == null) return null;
+            PerceptualHasher.Similarity sim = PerceptualHasher.similarity(
+                    srcHash, PerceptualHasher.hash(bestMatch));
+            FolderSyncResult.MatchStatus ms = similarityToStatus(sim);
+            if (ms == null) return null;
+            return entry(src, bestMatch, sizeSrc, safeSize(bestMatch), ms, bestDist);
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private FolderSyncResult.MatchStatus similarityToStatus(PerceptualHasher.Similarity sim) {
+        return switch (sim) {
+            case IDENTICAL         -> FolderSyncResult.MatchStatus.VISUAL_IDENTICAL;
+            case NEAR_IDENTICAL    -> FolderSyncResult.MatchStatus.VISUAL_NEAR_IDENTICAL;
+            case SIMILAR           -> FolderSyncResult.MatchStatus.VISUAL_SIMILAR;
+            case POSSIBLY_SIMILAR  -> FolderSyncResult.MatchStatus.VISUAL_POSSIBLY_SIMILAR;
+            case DIFFERENT         -> null;
+        };
+    }
+
+    // ── Index-Aufbau ─────────────────────────────────────────────────────────
+
+    private Map<Path, Path> collectFiles(Path dir) throws IOException {
+        Map<Path, Path> map = new LinkedHashMap<>();
+        try (Stream<Path> s = Files.walk(dir)) {
+            s.filter(Files::isRegularFile)
+                    .forEach(abs -> map.put(dir.relativize(abs), abs));
+        }
+        return map;
+    }
+
+    private Map<String, List<Path>> buildHashIndex(Collection<Path> files,
+                                                   BiConsumer<Integer, Integer> cb) {
+        Map<String, List<Path>> index = new HashMap<>();
+        int total = files.size(), done = 0;
+        for (Path p : files) {
+            try { index.computeIfAbsent(sha256(p), k -> new ArrayList<>()).add(p); }
+            catch (IOException ignored) {}
+            if (cb != null) cb.accept(++done, total);
+        }
+        return index;
+    }
+
+    /**
+     * Baut pHash-Index nur für Bilddateien auf (pHash → Liste von Pfaden).
+     */
+    private Map<Long, List<Path>> buildPHashIndex(Collection<Path> files,
+                                                  BiConsumer<Integer, Integer> cb) {
+        Map<Long, List<Path>> index = new HashMap<>();
+        int total = files.size(), done = 0;
+        for (Path p : files) {
+            if (PerceptualHasher.isImage(p)) {
+                try { index.computeIfAbsent(PerceptualHasher.hash(p), k -> new ArrayList<>()).add(p); }
+                catch (Exception ignored) {}
+            }
+            if (cb != null) cb.accept(++done, total);
+        }
+        return index;
+    }
+
+    // ── Hilfsmethoden ────────────────────────────────────────────────────────
+
+    private String sha256(Path file) throws IOException {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            try (InputStream is = Files.newInputStream(file)) {
+                byte[] buf = new byte[BUF]; int n;
+                while ((n = is.read(buf)) != -1) md.update(buf, 0, n);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte b : md.digest()) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 nicht verfügbar", e);
+        }
+    }
+
+    private long safeSize(Path p) {
+        try { return Files.size(p); } catch (IOException e) { return -1; }
+    }
+
+    private FolderSyncResult.FileEntry entry(Path src, Path tgt,
+                                             long ss, long ts,
+                                             FolderSyncResult.MatchStatus status,
+                                             int hammingDist) {
+        return new FolderSyncResult.FileEntry(src, tgt, ss, ts, status, hammingDist);
+    }
+
+    private int statusOrder(FolderSyncResult.MatchStatus s) {
+        return switch (s) {
+            case DUPLICATE              -> 0;
+            case NEEDS_REVIEW           -> 1;
+            case CONFLICT               -> 2;
+            case VISUAL_IDENTICAL       -> 3;
+            case VISUAL_NEAR_IDENTICAL  -> 4;
+            case VISUAL_SIMILAR         -> 5;
+            case VISUAL_POSSIBLY_SIMILAR-> 6;
+            case DIFFERENT              -> 7;
+        };
+    }
+}
