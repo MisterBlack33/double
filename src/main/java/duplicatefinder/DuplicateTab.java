@@ -1,4 +1,4 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,7 +11,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.List;
 
-import static de.duplicatefinder.DuplicateFinderGUI.*;
+import static duplicatefinder.DuplicateFinderGUI.*;
 
 /**
  * Tab 1: Duplikate suchen, anzeigen und gruppenübergreifend löschen.

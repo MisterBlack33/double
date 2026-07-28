@@ -1,17 +1,15 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.nio.file.*;
 import java.util.*;
 import java.util.List;
 
-import static de.duplicatefinder.DuplicateFinderGUI.*;
+import static duplicatefinder.DuplicateFinderGUI.*;
 
 /**
  * Tab 2: Zwei Ordner vergleichen – byte-basiert + optionaler pHash-Bildvergleich.

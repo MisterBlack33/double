@@ -1,4 +1,4 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
