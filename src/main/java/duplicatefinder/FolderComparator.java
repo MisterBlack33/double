@@ -170,12 +170,23 @@ public class FolderComparator {
     private FolderSyncResult.FileEntry visualEntry(Path src, Path tgt,
                                                    long sizeSrc, long sizeTgt) {
         try {
+            if (PerceptualHasher.isAnimatedGif(src) || PerceptualHasher.isAnimatedGif(tgt)) return null;
+
+            int[] dimSrc = PerceptualHasher.readDimensions(src);
+            int[] dimTgt = PerceptualHasher.readDimensions(tgt);
+            if (!PerceptualHasher.aspectRatioCompatible(dimSrc[0], dimSrc[1], dimTgt[0], dimTgt[1]))
+                return null;
+
             long hashSrc = PerceptualHasher.hash(src);
             long hashTgt = PerceptualHasher.hash(tgt);
             int  dist    = PerceptualHasher.hammingDistance(hashSrc, hashTgt);
             PerceptualHasher.Similarity sim = PerceptualHasher.similarity(hashSrc, hashTgt);
             FolderSyncResult.MatchStatus ms = similarityToStatus(sim);
             if (ms == null) return null;
+
+            if (!PerceptualHasher.histogramsPlausiblySimilar(
+                    PerceptualHasher.histogram(src), PerceptualHasher.histogram(tgt))) return null;
+
             return entry(src, tgt, sizeSrc, sizeTgt, ms, dist);
         } catch (Exception e) {
             return null;
@@ -188,26 +199,35 @@ public class FolderComparator {
      */
     private FolderSyncResult.FileEntry findBestVisualMatch(Path src, long sizeSrc,
                                                            Map<Long, List<Path>> tgtByPHash) {
+        if (PerceptualHasher.isAnimatedGif(src)) return null;
         try {
             long srcHash = PerceptualHasher.hash(src);
+            int[] dimSrc = PerceptualHasher.readDimensions(src);
             int bestDist = Integer.MAX_VALUE;
             Path bestMatch = null;
 
             for (Map.Entry<Long, List<Path>> e : tgtByPHash.entrySet()) {
                 int dist = PerceptualHasher.hammingDistance(srcHash, e.getKey());
-                if (dist < bestDist && dist <= 15) {
-                    bestDist = dist;
-                    bestMatch = e.getValue().get(0);
-                }
-            }
+                if (dist >= bestDist || dist > 15) continue;
 
+                Path candidate = e.getValue().get(0);
+                if (PerceptualHasher.isAnimatedGif(candidate)) continue;
+                int[] dimTgt = PerceptualHasher.readDimensions(candidate);
+                if (!PerceptualHasher.aspectRatioCompatible(dimSrc[0], dimSrc[1], dimTgt[0], dimTgt[1])) continue;
+
+                bestDist = dist;
+                bestMatch = candidate;
+            }
             if (bestMatch == null) return null;
+
+            if (!PerceptualHasher.histogramsPlausiblySimilar(
+                    PerceptualHasher.histogram(src), PerceptualHasher.histogram(bestMatch))) return null;
+
             PerceptualHasher.Similarity sim = PerceptualHasher.similarity(
                     srcHash, PerceptualHasher.hash(bestMatch));
             FolderSyncResult.MatchStatus ms = similarityToStatus(sim);
             if (ms == null) return null;
             return entry(src, bestMatch, sizeSrc, safeSize(bestMatch), ms, bestDist);
-
         } catch (Exception e) {
             return null;
         }
@@ -229,6 +249,7 @@ public class FolderComparator {
         Map<Path, Path> map = new LinkedHashMap<>();
         try (Stream<Path> s = Files.walk(dir)) {
             s.filter(Files::isRegularFile)
+                    .filter(abs -> !IgnoredFiles.shouldIgnore(abs))   // NEU
                     .forEach(abs -> map.put(dir.relativize(abs), abs));
         }
         return map;
@@ -240,7 +261,25 @@ public class FolderComparator {
         int total = files.size(), done = 0;
         for (Path p : files) {
             try { index.computeIfAbsent(sha256(p), k -> new ArrayList<>()).add(p); }
-            catch (IOException ignored) {}
+            catch (IOException e) {
+                System.err.printf("  Warnung: '%s' übersprungen (Hash) – %s%n", p.getFileName(), e.getMessage());
+            }
+            if (cb != null) cb.accept(++done, total);
+        }
+        return index;
+    }
+
+    private Map<Long, List<Path>> buildPHashIndex(Collection<Path> files,
+                                                  BiConsumer<Integer, Integer> cb) {
+        Map<Long, List<Path>> index = new HashMap<>();
+        int total = files.size(), done = 0;
+        for (Path p : files) {
+            if (PerceptualHasher.isImage(p) && !PerceptualHasher.isAnimatedGif(p)) {
+                try { index.computeIfAbsent(PerceptualHasher.hash(p), k -> new ArrayList<>()).add(p); }
+                catch (Exception e) {
+                    System.err.printf("  Warnung: '%s' übersprungen (pHash) – %s%n", p.getFileName(), e.getMessage());
+                }
+            }
             if (cb != null) cb.accept(++done, total);
         }
         return index;
@@ -293,14 +332,15 @@ public class FolderComparator {
 
     private int statusOrder(FolderSyncResult.MatchStatus s) {
         return switch (s) {
-            case DUPLICATE              -> 0;
-            case NEEDS_REVIEW           -> 1;
-            case CONFLICT               -> 2;
-            case VISUAL_IDENTICAL       -> 3;
-            case VISUAL_NEAR_IDENTICAL  -> 4;
-            case VISUAL_SIMILAR         -> 5;
-            case VISUAL_POSSIBLY_SIMILAR-> 6;
-            case DIFFERENT              -> 7;
+            case DUPLICATE               -> 0;
+            case NEEDS_REVIEW            -> 1;
+            case CONFLICT                -> 2;
+            case NEAR_DUPLICATE_TEXT     -> 3;   // NEU
+            case VISUAL_IDENTICAL        -> 4;
+            case VISUAL_NEAR_IDENTICAL   -> 5;
+            case VISUAL_SIMILAR          -> 6;
+            case VISUAL_POSSIBLY_SIMILAR -> 7;
+            case DIFFERENT               -> 8;
         };
     }
 }

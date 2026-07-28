@@ -147,6 +147,10 @@ public final class PerceptualHasher {
         Graphics2D g = result.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                 RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        // Transparente Bereiche auf Weiß statt Schwarz legen – sonst hashen zwei
+        // Bilder mit unterschiedlichem, aber transparentem Inhalt gleich.
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, targetW, targetH);
         g.drawImage(src, 0, 0, targetW, targetH, null);
         g.dispose();
         return result;
