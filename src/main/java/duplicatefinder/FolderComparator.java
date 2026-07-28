@@ -11,7 +11,8 @@ import java.util.stream.Stream;
 
 /**
  * Vergleicht zwei Ordner nach der 8-Fall-Spezifikation (byte-basiert)
- * und ergänzt für Bilder einen optionalen pHash-Vergleich.
+ * und ergänzt für Bilder einen optionalen pHash-Vergleich sowie für
+ * Textdateien einen SimHash-basierten Nah-Duplikat-Vergleich.
  *
  * <h3>Byte-Vergleich (alle Dateitypen)</h3>
  * <pre>
@@ -33,10 +34,17 @@ import java.util.stream.Stream;
  *
  * Ebenso werden Bildpaare aus verschiedenen Formaten (z.B. .jpg vs .png)
  * per pHash verglichen und als VISUAL_* gemeldet.
+ *
+ * <h3>SimHash-Erweiterung (nur Textdateien)</h3>
+ * Fälle 3 und 4 (gleicher Name, ungleicher Inhalt) werden für Textdateien
+ * zusätzlich per SimHash verglichen. Liegt die Hamming-Distanz unter dem
+ * Schwellwert, wird der Eintrag als NEAR_DUPLICATE_TEXT statt
+ * CONFLICT/DIFFERENT gewertet.
  */
 public class FolderComparator {
 
     private static final int BUF = 65_536;
+    private static final int TEXT_SIMHASH_THRESHOLD = 6; // von 64 Bit Hamming-Distanz
 
     /**
      * Vergleicht Quell- und Zielordner vollständig.
@@ -108,25 +116,14 @@ public class FolderComparator {
                             FolderSyncResult.MatchStatus.NEEDS_REVIEW, -1));
 
                 } else if (sizeEq) {
-                    // Fall 3: Name= Inhalt≠ Größe= → CONFLICT (oder visuell?)
-                    FolderSyncResult.FileEntry ve =
-                            srcIsImage && PerceptualHasher.isImage(absTgt)
-                                    ? visualEntry(absSrc, absTgt, sizeSrc, sizeTgt)
-                                    : null;
-                    if (ve != null && ve.isVisualMatch()) entries.add(ve);
-                    else {
-                        entries.add(entry(absSrc, absTgt, sizeSrc, sizeTgt,
-                                FolderSyncResult.MatchStatus.CONFLICT, -1));
-                    }
-
+                    // Fall 3: Name= Inhalt≠ Größe= → CONFLICT, Bild oder Text?
+                    FolderSyncResult.FileEntry ve = classifyNonByteMatch(absSrc, absTgt, sizeSrc, sizeTgt, srcIsImage);
+                    entries.add(ve != null ? ve
+                            : entry(absSrc, absTgt, sizeSrc, sizeTgt, FolderSyncResult.MatchStatus.CONFLICT, -1));
                 } else {
                     // Fall 4: Name= Inhalt≠ Größe≠ → normalerweise ignoriert
-                    // Für Bilder: trotzdem pHash-Check
-                    if (srcIsImage && PerceptualHasher.isImage(absTgt)) {
-                        FolderSyncResult.FileEntry ve =
-                                visualEntry(absSrc, absTgt, sizeSrc, sizeTgt);
-                        if (ve != null && ve.isVisualMatch()) { entries.add(ve); continue; }
-                    }
+                    FolderSyncResult.FileEntry ve = classifyNonByteMatch(absSrc, absTgt, sizeSrc, sizeTgt, srcIsImage);
+                    if (ve != null) { entries.add(ve); continue; }
                     differentCount++;
                 }
 
@@ -154,7 +151,7 @@ public class FolderComparator {
             }
         }
 
-        // Sortierung: DUPLICATE → NEEDS_REVIEW → CONFLICT → VISUAL_*
+        // Sortierung: DUPLICATE → NEEDS_REVIEW → CONFLICT → NEAR_DUPLICATE_TEXT → VISUAL_*
         entries.sort(Comparator.comparingInt(e -> statusOrder(e.getStatus())));
 
         return new FolderSyncResult(sourceDir, targetDir, entries,
@@ -243,6 +240,47 @@ public class FolderComparator {
         };
     }
 
+    // ── SimHash-Vergleich (Text) ──────────────────────────────────────────────
+
+    /**
+     * Vergleicht zwei Textdateien per SimHash und gibt einen FileEntry
+     * mit Status NEAR_DUPLICATE_TEXT zurück, oder null wenn die Distanz
+     * über dem Schwellwert liegt oder die Dateien nicht lesbar sind.
+     */
+    private FolderSyncResult.FileEntry textNearDuplicateEntry(Path src, Path tgt,
+                                                              long sizeSrc, long sizeTgt) {
+        try {
+            long hashSrc = SimHasher.hash(src);
+            long hashTgt = SimHasher.hash(tgt);
+            int dist = SimHasher.hammingDistance(hashSrc, hashTgt);
+            if (dist > TEXT_SIMHASH_THRESHOLD) return null;
+            return entry(src, tgt, sizeSrc, sizeTgt,
+                    FolderSyncResult.MatchStatus.NEAR_DUPLICATE_TEXT, dist);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Klassifiziert ein Dateipaar mit gleichem Namen, aber ungleichem Byte-Inhalt
+     * (Fälle 3/4): versucht zunächst einen visuellen Treffer (Bilder), dann einen
+     * SimHash-Treffer (Text). Gibt null zurück, wenn keine der beiden zutrifft.
+     */
+    private FolderSyncResult.FileEntry classifyNonByteMatch(Path absSrc, Path absTgt,
+                                                            long sizeSrc, long sizeTgt,
+                                                            boolean srcIsImage) {
+        if (srcIsImage && PerceptualHasher.isImage(absTgt)) {
+            FolderSyncResult.FileEntry ve = visualEntry(absSrc, absTgt, sizeSrc, sizeTgt);
+            if (ve != null && ve.isVisualMatch()) return ve;
+            return null;
+        }
+        if (FileKindClassifier.classify(absSrc) == FileKind.TEXT
+                && FileKindClassifier.classify(absTgt) == FileKind.TEXT) {
+            return textNearDuplicateEntry(absSrc, absTgt, sizeSrc, sizeTgt);
+        }
+        return null;
+    }
+
     // ── Index-Aufbau ─────────────────────────────────────────────────────────
 
     private Map<Path, Path> collectFiles(Path dir) throws IOException {
@@ -269,6 +307,10 @@ public class FolderComparator {
         return index;
     }
 
+    /**
+     * Baut pHash-Index nur für Bilddateien auf (pHash → Liste von Pfaden).
+     * Animierte GIFs werden ausgeschlossen, da ihr pHash nur das erste Frame abbildet.
+     */
     private Map<Long, List<Path>> buildPHashIndex(Collection<Path> files,
                                                   BiConsumer<Integer, Integer> cb) {
         Map<Long, List<Path>> index = new HashMap<>();
@@ -279,23 +321,6 @@ public class FolderComparator {
                 catch (Exception e) {
                     System.err.printf("  Warnung: '%s' übersprungen (pHash) – %s%n", p.getFileName(), e.getMessage());
                 }
-            }
-            if (cb != null) cb.accept(++done, total);
-        }
-        return index;
-    }
-
-    /**
-     * Baut pHash-Index nur für Bilddateien auf (pHash → Liste von Pfaden).
-     */
-    private Map<Long, List<Path>> buildPHashIndex(Collection<Path> files,
-                                                  BiConsumer<Integer, Integer> cb) {
-        Map<Long, List<Path>> index = new HashMap<>();
-        int total = files.size(), done = 0;
-        for (Path p : files) {
-            if (PerceptualHasher.isImage(p)) {
-                try { index.computeIfAbsent(PerceptualHasher.hash(p), k -> new ArrayList<>()).add(p); }
-                catch (Exception ignored) {}
             }
             if (cb != null) cb.accept(++done, total);
         }
