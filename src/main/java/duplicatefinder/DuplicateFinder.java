@@ -1,4 +1,4 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 /**
  * Einstiegspunkt des Duplicate-Finder-Projekts.

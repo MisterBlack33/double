@@ -1,12 +1,11 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-import static de.duplicatefinder.DuplicateFinderGUI.*;
+import static duplicatefinder.DuplicateFinderGUI.*;
 
 /**
  * Kleine Factory-Klasse für konsistente UI-Komponenten.

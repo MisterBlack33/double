@@ -1,20 +1,10 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.table.*;
 import java.awt.*;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
-import java.io.*;
-import java.nio.file.*;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * Haupt-GUI des Duplicate File Finders.

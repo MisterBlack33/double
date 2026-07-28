@@ -1,4 +1,4 @@
-package de.duplicatefinder;
+package duplicatefinder;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,7 +8,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.function.Consumer;
 
-import static de.duplicatefinder.DuplicateFinderGUI.*;
+import static duplicatefinder.DuplicateFinderGUI.*;
 
 /**
  * Wiederverwendbare Drag-&-Drop-Zone für Ordnerauswahl.
