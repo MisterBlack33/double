@@ -59,10 +59,8 @@ public class DuplicateFinderGUI extends JFrame {
         JPanel root = Ui.panel(new BorderLayout());
         root.setBorder(new EmptyBorder(20, 24, 20, 24));
 
-        // Header
         root.add(buildHeader(), BorderLayout.NORTH);
 
-        // Tabs
         tabs = buildTabs();
         root.add(tabs, BorderLayout.CENTER);
 
