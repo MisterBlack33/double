@@ -13,6 +13,7 @@ import static duplicatefinder.DuplicateFinderGUI.*;
 
 /**
  * Tab 2: Zwei Ordner vergleichen – byte-basiert + optionaler pHash-Bildvergleich.
+ * Ein Klick auf eine Ergebniszeile zeigt die Quelldatei in der Dateivorschau.
  *
  * <h3>Byte-Vergleich</h3>
  * <pre>
@@ -49,12 +50,13 @@ public class SyncTab extends JPanel {
     private JLabel            lblStatus, lblSummary, lblMarked;
     private JTable            resultTable;
     private DefaultTableModel resultModel;
+    private final FilePreviewPanel previewPanel = new FilePreviewPanel();
 
     // Farben für visuelle Status
-    private static final Color VISUAL_1 = new Color(180,  80, 220);  // identisch
-    private static final Color VISUAL_2 = new Color(130,  80, 200);  // fast identisch
-    private static final Color VISUAL_3 = new Color( 88, 130, 255);  // ähnlich
-    private static final Color VISUAL_4 = new Color( 88, 166, 255);  // möglicherweise
+    private static final Color VISUAL_1 = new Color(180,  80, 220);
+    private static final Color VISUAL_2 = new Color(130,  80, 200);
+    private static final Color VISUAL_3 = new Color( 88, 130, 255);
+    private static final Color VISUAL_4 = new Color( 88, 166, 255);
 
     public SyncTab(DuplicateFinderGUI root) {
         this.root = root;
@@ -115,7 +117,6 @@ public class SyncTab extends JPanel {
     }
 
     private JPanel buildCenter() {
-        // Spalten: ✓Quelle | ✓Ziel | Status | Fall | Quelldatei | Zieldatei | Gr.Quelle | Gr.Ziel | Hamming
         String[] cols = {"✓ Quelle", "✓ Ziel", "Status", "Fall",
                 "Quelldatei (relativ)", "Zieldatei (relativ)",
                 "Gr. Quelle", "Gr. Ziel", "Hamming"};
@@ -141,8 +142,10 @@ public class SyncTab extends JPanel {
         resultModel.addTableModelListener(e -> {
             if (e.getColumn() == 0 || e.getColumn() == 1) syncMarkedSets();
         });
+        resultTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) onRowSelected();
+        });
 
-        // Option + Legende
         JPanel opts = Ui.panel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         cbVisual = new JCheckBox("Visuellen Bildvergleich aktivieren (pHash, langsamer)");
         cbVisual.setBackground(BG);
@@ -165,10 +168,15 @@ public class SyncTab extends JPanel {
         topBar.add(opts,   BorderLayout.WEST);
         topBar.add(legend, BorderLayout.EAST);
 
+        JPanel tableWrap = Ui.panel(new BorderLayout(10, 0));
+        tableWrap.add(Ui.scrollPane(resultTable), BorderLayout.CENTER);
+        previewPanel.setPreferredSize(new Dimension(280, 0));
+        tableWrap.add(previewPanel, BorderLayout.EAST);
+
         JPanel center = Ui.panel(new BorderLayout(0, 6));
-        center.add(topBar,                        BorderLayout.NORTH);
-        center.add(Ui.scrollPane(resultTable),    BorderLayout.CENTER);
-        center.add(lblSummary,                    BorderLayout.SOUTH);
+        center.add(topBar,     BorderLayout.NORTH);
+        center.add(tableWrap,  BorderLayout.CENTER);
+        center.add(lblSummary, BorderLayout.SOUTH);
         return center;
     }
 
@@ -211,6 +219,7 @@ public class SyncTab extends JPanel {
         lastResult = null;
         markedSource.clear(); markedTarget.clear();
         updateMarkedLabel();
+        previewPanel.preview(null);
         btnCompare.setEnabled(false);
         btnMarkAllDuplicates.setEnabled(false);
         btnDeleteMarked.setEnabled(false);
@@ -268,7 +277,7 @@ public class SyncTab extends JPanel {
                     ? fe.getHammingDistance() + "/64" : "";
 
             resultModel.addRow(new Object[]{
-                    fe.isDuplicate(),   // Quelldatei bei Duplikaten vorauswählen
+                    fe.isDuplicate(),
                     false,
                     statusLabel(fe.getStatus()),
                     caseLabel(fe),
@@ -290,6 +299,19 @@ public class SyncTab extends JPanel {
         root.log(lblSummary.getText());
         btnMarkAllDuplicates.setEnabled(dupes > 0);
         syncMarkedSets();
+    }
+
+    /** Zeigt die Quelldatei der aktuell selektierten Zeile in der Vorschau. */
+    private void onRowSelected() {
+        int viewRow = resultTable.getSelectedRow();
+        if (viewRow < 0 || lastResult == null) {
+            previewPanel.preview(null);
+            return;
+        }
+        int modelRow = resultTable.convertRowIndexToModel(viewRow);
+        List<FolderSyncResult.FileEntry> entries = lastResult.getEntries();
+        if (modelRow >= entries.size()) return;
+        previewPanel.preview(entries.get(modelRow).getSourcePath());
     }
 
     // ── Checkbox-Synchronisation ──────────────────────────────────────────────
@@ -334,35 +356,16 @@ public class SyncTab extends JPanel {
 
     private void deleteMarked() {
         syncMarkedSets();
-        int total = markedSource.size() + markedTarget.size();
-        if (total == 0) return;
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(total).append(" Datei(en) werden permanent gelöscht:\n\n");
-        int shown = 0;
-        for (Path p : markedSource) {
-            if (++shown > 12) { sb.append("  … und weitere\n"); break; }
-            sb.append("  [Quelle] ").append(p.toAbsolutePath()).append("\n");
-        }
-        for (Path p : markedTarget) {
-            if (++shown > 18) { sb.append("  … und weitere\n"); break; }
-            sb.append("  [Ziel]   ").append(p.toAbsolutePath()).append("\n");
-        }
-        sb.append("\nDiese Aktion kann NICHT rückgängig gemacht werden!");
+        boolean confirmed = DeletionConfirmationDialog.confirm(root, List.of(
+                new DeletionConfirmationDialog.Group("[Quelle] ", markedSource),
+                new DeletionConfirmationDialog.Group("[Ziel]   ", markedTarget)));
+        if (!confirmed) return;
 
-        if (JOptionPane.showConfirmDialog(root, sb.toString(), "Löschen bestätigen",
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION)
-            return;
-
-        int deleted = 0, failed = 0;
-        for (Path p : new ArrayList<>(markedSource)) {
-            try { Files.delete(p); deleted++; root.log("Gelöscht [Quelle]: " + p); }
-            catch (Exception ex) { failed++; root.log("FEHLER: " + p.getFileName() + " – " + ex.getMessage()); }
-        }
-        for (Path p : new ArrayList<>(markedTarget)) {
-            try { Files.delete(p); deleted++; root.log("Gelöscht [Ziel]: " + p); }
-            catch (Exception ex) { failed++; root.log("FEHLER: " + p.getFileName() + " – " + ex.getMessage()); }
-        }
+        DeletionExecutor.Result srcResult = DeletionExecutor.delete(markedSource, " [Quelle]", root::log);
+        DeletionExecutor.Result tgtResult = DeletionExecutor.delete(markedTarget, " [Ziel]", root::log);
+        int deleted = srcResult.deleted() + tgtResult.deleted();
+        int failed  = srcResult.failed()  + tgtResult.failed();
 
         String msg = deleted + " Datei(en) gelöscht" + (failed > 0 ? ", " + failed + " Fehler" : "") + ".";
         root.log(msg);
@@ -377,6 +380,7 @@ public class SyncTab extends JPanel {
         resultModel.setRowCount(0);
         markedSource.clear(); markedTarget.clear();
         updateMarkedLabel();
+        previewPanel.preview(null);
         lblSummary.setText("");
         progressBar.setValue(0);
         btnCompare.setEnabled(false);
@@ -395,7 +399,7 @@ public class SyncTab extends JPanel {
             case DUPLICATE               -> "Duplikat";
             case NEEDS_REVIEW            -> "Zu prüfen";
             case CONFLICT                -> "Konflikt";
-            case NEAR_DUPLICATE_TEXT     -> "Text ähnlich";     // NEU
+            case NEAR_DUPLICATE_TEXT     -> "Text ähnlich";
             case VISUAL_IDENTICAL        -> "Vis. identisch";
             case VISUAL_NEAR_IDENTICAL   -> "Vis. fast id.";
             case VISUAL_SIMILAR          -> "Vis. ähnlich";
@@ -411,7 +415,7 @@ public class SyncTab extends JPanel {
             case DUPLICATE               -> "#1";
             case NEEDS_REVIEW            -> nameEq ? "#2" : (sizeEq ? "#5" : "#6");
             case CONFLICT                -> "#3";
-            case NEAR_DUPLICATE_TEXT     -> "T1";               // NEU
+            case NEAR_DUPLICATE_TEXT     -> "T1";
             case VISUAL_IDENTICAL        -> "V0";
             case VISUAL_NEAR_IDENTICAL   -> "V1";
             case VISUAL_SIMILAR          -> "V2";
@@ -425,7 +429,7 @@ public class SyncTab extends JPanel {
             case "Duplikat"      -> DANGER;
             case "Zu prüfen"     -> WARNING;
             case "Konflikt"      -> new Color(210, 120, 40);
-            case "Text ähnlich"  -> new Color(46, 160, 130);    // NEU, Türkis
+            case "Text ähnlich"  -> new Color(46, 160, 130);
             case "Vis. identisch"-> VISUAL_1;
             case "Vis. fast id." -> VISUAL_2;
             case "Vis. ähnlich"  -> VISUAL_3;

@@ -5,6 +5,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
@@ -14,13 +16,13 @@ import java.util.List;
 import static duplicatefinder.DuplicateFinderGUI.*;
 
 /**
- * Tab 1: Duplikate suchen, anzeigen und gruppenübergreifend löschen.
+ * Tab 1: Duplikate suchen, anzeigen, per Klick in der Vorschau prüfen und gruppenübergreifend löschen.
  *
  * <p>Workflow:
  * <ol>
  *   <li>Ordner per Drag &amp; Drop oder Klick wählen</li>
  *   <li>"Scan starten" → dreistufige Analyse</li>
- *   <li>Gruppen durchklicken, Dateien in der Detailansicht markieren</li>
+ *   <li>Gruppen durchklicken, Dateien in der Detailansicht markieren; Klick zeigt Vorschau</li>
  *   <li>Markierungen bleiben gruppenübergreifend erhalten</li>
  *   <li>"X markierte löschen" → einmalige Bestätigung → alle auf einmal löschen → ein Neustart</li>
  * </ol>
@@ -38,7 +40,7 @@ public class DuplicateTab extends JPanel {
     // ── UI ────────────────────────────────────────────────────────────────────
     private DropZonePanel     dropZone;
     private JButton           btnScan, btnClear, btnExport, btnDeleteAll, btnMarkAll;
-    private JLabel            lblMarked;        // "X Dateien markiert"
+    private JLabel            lblMarked;
     private JProgressBar      progressBar;
     private JLabel            lblStatus;
     private JTable            groupTable;
@@ -46,7 +48,8 @@ public class DuplicateTab extends JPanel {
     private JPanel            detailPanel;
     private JLabel            lblDetailHeader;
     private JCheckBox[]       detailCheckboxes;
-    private List<Path>        currentGroupPaths; // Pfade der aktuell sichtbaren Gruppe
+    private List<Path>        currentGroupPaths;
+    private final FilePreviewPanel previewPanel = new FilePreviewPanel();
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -66,8 +69,8 @@ public class DuplicateTab extends JPanel {
         add(dropZone, BorderLayout.NORTH);
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-                buildGroupPanel(), buildDetailPanel());
-        split.setDividerLocation(580);
+                buildGroupPanel(), buildRightPanel());
+        split.setDividerLocation(500);
         split.setDividerSize(5);
         split.setBorder(null);
         split.setBackground(BG);
@@ -96,7 +99,6 @@ public class DuplicateTab extends JPanel {
         for (int i = 0; i < widths.length; i++)
             groupTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
 
-        // Einsparpotenzial rot
         groupTable.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
@@ -110,6 +112,15 @@ public class DuplicateTab extends JPanel {
         });
 
         return Ui.scrollPane(groupTable);
+    }
+
+    /** Detailansicht (Mitte) + Dateivorschau (rechts), damit man Inhalte prüfen kann ohne die Datei extern zu öffnen. */
+    private JPanel buildRightPanel() {
+        JPanel wrapper = Ui.panel(new BorderLayout(10, 0));
+        wrapper.add(buildDetailPanel(), BorderLayout.CENTER);
+        previewPanel.setPreferredSize(new Dimension(280, 0));
+        wrapper.add(previewPanel, BorderLayout.EAST);
+        return wrapper;
     }
 
     private JPanel buildDetailPanel() {
@@ -133,17 +144,15 @@ public class DuplicateTab extends JPanel {
         JPanel p = Ui.panel(new BorderLayout(12, 0));
         p.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        // Links: Status + Progress
         JPanel left = Ui.panel(new GridLayout(3, 1, 0, 3));
         lblStatus = Ui.label("Bereit.", FONT_MONO, MUTED);
-        lblMarked = Ui.label("", FONT_MONO, new Color(210, 153, 34)); // WARNING-gelb
+        lblMarked = Ui.label("", FONT_MONO, new Color(210, 153, 34));
         progressBar = Ui.progressBar();
         left.add(lblStatus);
         left.add(lblMarked);
         left.add(progressBar);
         p.add(left, BorderLayout.CENTER);
 
-        // Rechts: Buttons
         JPanel buttons = Ui.panel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnExport    = Ui.button("Exportieren",              CARD,    MUTED,  120, 34);
         btnMarkAll   = Ui.button("Alle Duplikate markieren", WARNING, BG,     210, 34);
@@ -259,7 +268,6 @@ public class DuplicateTab extends JPanel {
 
     private void onGroupSelected(int viewRow) {
         if (viewRow < 0 || lastResult == null) return;
-        // Checkbox-Zustand der aktuellen Gruppe erst sichern, bevor wir wechseln
         saveCurrentGroupCheckboxes();
         int modelRow = groupTable.convertRowIndexToModel(viewRow);
         currentGroupRow = modelRow;
@@ -271,6 +279,7 @@ public class DuplicateTab extends JPanel {
     private void buildDetailView(ScanResult.DuplicateGroup grp) {
         currentGroupPaths = grp.getPaths();
         detailCheckboxes  = new JCheckBox[currentGroupPaths.size()];
+        previewPanel.preview(null);
 
         lblDetailHeader.setText(String.format("  Gruppe: %d Dateien · %s · Einsparpotenzial: %s",
                 currentGroupPaths.size(),
@@ -294,7 +303,6 @@ public class DuplicateTab extends JPanel {
         sc.setBorder(null);
         sc.getViewport().setBackground(SURFACE);
 
-        // Schnellauswahl-Buttons
         JPanel actions = Ui.panel(new FlowLayout(FlowLayout.LEFT, 8, 6));
         actions.setBackground(CARD);
         JButton btnAll  = Ui.button("Alle",      CARD, TEXT,    60, 28);
@@ -324,11 +332,15 @@ public class DuplicateTab extends JPanel {
         row.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER),
                 new EmptyBorder(6, 8, 6, 8)));
+        row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        // Klick auf die Zeile zeigt die Vorschau, ohne die Markierungs-Checkbox zu berühren.
+        row.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) { previewPanel.preview(path); }
+        });
 
         JCheckBox cb = new JCheckBox();
         cb.setBackground(row.getBackground());
         cb.setSelected(alreadyMarked);
-        // Jede Änderung sofort in markedForDeletion übernehmen
         cb.addActionListener(e -> {
             if (cb.isSelected()) markedForDeletion.add(path);
             else                 markedForDeletion.remove(path);
@@ -354,7 +366,6 @@ public class DuplicateTab extends JPanel {
         return row;
     }
 
-    /** Sichert den aktuellen Checkbox-Zustand in markedForDeletion (Sicherheitsnetz). */
     private void saveCurrentGroupCheckboxes() {
         if (detailCheckboxes == null || currentGroupPaths == null) return;
         for (int i = 0; i < detailCheckboxes.length; i++) {
@@ -382,17 +393,15 @@ public class DuplicateTab extends JPanel {
         btnDeleteAll.setEnabled(n > 0);
     }
 
-    /** Markiert in jeder Gruppe alle Dateien außer dem ersten Eintrag (Original). */
     private void markAllDuplicates() {
         if (lastResult == null || !lastResult.hasDuplicates()) return;
         for (ScanResult.DuplicateGroup grp : lastResult.getGroups()) {
             List<Path> paths = grp.getPaths();
-            for (int i = 1; i < paths.size(); i++) {   // Index 0 = Original → überspringen
+            for (int i = 1; i < paths.size(); i++) {
                 markedForDeletion.add(paths.get(i));
             }
         }
         updateMarkedLabel();
-        // Detailansicht aktualisieren, damit Checkboxen den neuen Zustand zeigen
         if (currentGroupRow >= 0) buildDetailView(lastResult.getGroups().get(currentGroupRow));
         root.log("Alle Duplikate markiert: " + markedForDeletion.size() + " Datei(en)");
     }
@@ -400,7 +409,7 @@ public class DuplicateTab extends JPanel {
     // ── Löschen (alle auf einmal) ─────────────────────────────────────────────
 
     private void deleteAllMarked() {
-        saveCurrentGroupCheckboxes(); // sicherstellen, dass aktuelle Gruppe erfasst ist
+        saveCurrentGroupCheckboxes();
 
         if (markedForDeletion.isEmpty()) {
             JOptionPane.showMessageDialog(root,
@@ -408,44 +417,17 @@ public class DuplicateTab extends JPanel {
             return;
         }
 
-        // Bestätigungsdialog
-        StringBuilder msg = new StringBuilder();
-        msg.append(markedForDeletion.size()).append(" Datei(en) werden permanent gelöscht:\n\n");
-        int shown = 0;
-        for (Path p : markedForDeletion) {
-            msg.append("  ").append(p.toAbsolutePath()).append("\n");
-            if (++shown == 20 && markedForDeletion.size() > 20) {
-                msg.append("  … und ").append(markedForDeletion.size() - 20)
-                        .append(" weitere\n");
-                break;
-            }
-        }
-        msg.append("\nDiese Aktion kann NICHT rückgängig gemacht werden!");
+        boolean confirmed = DeletionConfirmationDialog.confirm(root,
+                List.of(new DeletionConfirmationDialog.Group("", markedForDeletion)));
+        if (!confirmed) return;
 
-        int confirm = JOptionPane.showConfirmDialog(root, msg.toString(),
-                "Löschen bestätigen", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
-
-        // Alle auf einmal löschen
-        int deleted = 0, failed = 0;
-        for (Path p : new ArrayList<>(markedForDeletion)) {
-            try {
-                Files.delete(p);
-                deleted++;
-                root.log("Gelöscht: " + p.toAbsolutePath());
-            } catch (IOException ex) {
-                failed++;
-                root.log("FEHLER: " + p.getFileName() + " – " + ex.getMessage());
-            }
-        }
-
-        String summary = deleted + " Datei(en) gelöscht"
-                + (failed > 0 ? ", " + failed + " fehlgeschlagen" : "") + ".";
+        DeletionExecutor.Result result = DeletionExecutor.delete(markedForDeletion, "", root::log);
+        String summary = result.deleted() + " Datei(en) gelöscht"
+                + (result.failed() > 0 ? ", " + result.failed() + " fehlgeschlagen" : "") + ".";
         root.log(summary);
         JOptionPane.showMessageDialog(root, summary,
                 "Löschen abgeschlossen", JOptionPane.INFORMATION_MESSAGE);
 
-        // Erst jetzt: einmalig neu scannen
         startScan();
     }
 
@@ -454,6 +436,7 @@ public class DuplicateTab extends JPanel {
     private void clearDetail() {
         detailCheckboxes  = null;
         currentGroupPaths = null;
+        previewPanel.preview(null);
         if (detailPanel.getComponentCount() > 1) detailPanel.remove(1);
         JLabel ph = Ui.label("← Duplikat-Gruppe in der Tabelle auswählen", FONT_UI, MUTED);
         ph.setHorizontalAlignment(SwingConstants.CENTER);
