@@ -38,6 +38,10 @@ public final class PerceptualHasher {
     private static final int RESIZE  = 32;  // Skalierungsgröße für DCT
     private static final int DCT_SIZE = 8;  // Größe des genutzten DCT-Fensters
 
+    private static final double ASPECT_RATIO_TOLERANCE = 0.12;
+    private static final int HISTOGRAM_BINS = 16;
+    private static final double HISTOGRAM_MAX_DISTANCE = 0.35;
+
     /** Ähnlichkeitsstufen basierend auf Hamming-Distanz. */
     public enum Similarity {
         /** Hamming 0: pixelidentisch nach Normalisierung (Format-Konversion, EXIF-Strip). */
@@ -105,6 +109,89 @@ public final class PerceptualHasher {
         String name = path.getFileName().toString().toLowerCase();
         int dot = name.lastIndexOf('.');
         return dot >= 0 && SUPPORTED_EXTENSIONS.contains(name.substring(dot + 1));
+    }
+
+    /** Liest nur die Bildmaße, ohne die vollen Pixel zu dekodieren. */
+    public static int[] readDimensions(Path imagePath) throws IOException {
+        try (javax.imageio.stream.ImageInputStream iis =
+                     ImageIO.createImageInputStream(imagePath.toFile())) {
+            java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (!readers.hasNext())
+                throw new IOException("Format nicht lesbar: " + imagePath.getFileName());
+            javax.imageio.ImageReader reader = readers.next();
+            try {
+                reader.setInput(iis);
+                return new int[]{reader.getWidth(0), reader.getHeight(0)};
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
+    /**
+     * Prüft, ob zwei Seitenverhältnisse innerhalb der Toleranz übereinstimmen.
+     * Verhindert falsch-positive visuelle Treffer bei stark unterschiedlich
+     * geformten Bildern (z. B. Hochformat vs. Querformat).
+     */
+    public static boolean aspectRatioCompatible(int wA, int hA, int wB, int hB) {
+        if (wA <= 0 || hA <= 0 || wB <= 0 || hB <= 0) return true; // keine Aussage möglich
+        double ratioA = (double) wA / hA;
+        double ratioB = (double) wB / hB;
+        double diff = Math.abs(ratioA - ratioB) / Math.max(ratioA, ratioB);
+        return diff <= ASPECT_RATIO_TOLERANCE;
+    }
+
+    /**
+     * Berechnet ein normalisiertes Graustufen-Histogramm eines Bildes
+     * (Zusatzprüfung, um pHash-Fehlalarme bei sehr unterschiedlichen Bildern
+     * mit zufällig ähnlicher DCT-Struktur auszuschließen).
+     */
+    public static double[] histogram(Path imagePath) throws IOException {
+        BufferedImage img = ImageIO.read(imagePath.toFile());
+        if (img == null)
+            throw new UnsupportedOperationException("Format nicht lesbar: " + imagePath.getFileName());
+        return histogram(img);
+    }
+
+    public static double[] histogram(BufferedImage img) {
+        BufferedImage gray = toGrayscale(resize(img, RESIZE, RESIZE));
+        int[] bins = new int[HISTOGRAM_BINS];
+        for (int y = 0; y < RESIZE; y++) {
+            for (int x = 0; x < RESIZE; x++) {
+                int value = gray.getRaster().getSample(x, y, 0);
+                bins[Math.min(HISTOGRAM_BINS - 1, value * HISTOGRAM_BINS / 256)]++;
+            }
+        }
+        double total = RESIZE * RESIZE;
+        double[] normalized = new double[HISTOGRAM_BINS];
+        for (int i = 0; i < HISTOGRAM_BINS; i++) normalized[i] = bins[i] / total;
+        return normalized;
+    }
+
+    /** Gibt true zurück, wenn zwei Histogramme sich plausibel ähnlich sind. */
+    public static boolean histogramsPlausiblySimilar(double[] a, double[] b) {
+        double distance = 0.0;
+        for (int i = 0; i < a.length; i++) distance += Math.abs(a[i] - b[i]);
+        return distance <= HISTOGRAM_MAX_DISTANCE;
+    }
+
+    /** Gibt true zurück, wenn die GIF-Datei mehr als ein Frame enthält (animiert). */
+    public static boolean isAnimatedGif(Path file) {
+        if (!file.getFileName().toString().toLowerCase().endsWith(".gif")) return false;
+        try (javax.imageio.stream.ImageInputStream iis =
+                     ImageIO.createImageInputStream(file.toFile())) {
+            java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (!readers.hasNext()) return false;
+            javax.imageio.ImageReader reader = readers.next();
+            try {
+                reader.setInput(iis);
+                return reader.getNumImages(true) > 1;
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     // ── Interne Implementierung ───────────────────────────────────────────────
