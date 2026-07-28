@@ -17,29 +17,29 @@ import java.util.*;
 public class DuplicateFinderGUI extends JFrame {
 
     // ── Design-Tokens ─────────────────────────────────────────────────────────
-    static final Color BG       = new Color(13, 17, 23);
-    static final Color SURFACE  = new Color(22, 27, 34);
-    static final Color CARD     = new Color(30, 37, 48);
-    static final Color BORDER   = new Color(48, 54, 61);
-    static final Color ACCENT   = new Color(88, 166, 255);
+    static final Color BG = new Color(13, 17, 23);
+    static final Color SURFACE = new Color(22, 27, 34);
+    static final Color CARD = new Color(30, 37, 48);
+    static final Color BORDER = new Color(48, 54, 61);
+    static final Color ACCENT = new Color(88, 166, 255);
     static final Color ACCENT_A = new Color(88, 166, 255, 45);
-    static final Color SUCCESS  = new Color(63, 185, 80);
-    static final Color DANGER   = new Color(248, 81, 73);
-    static final Color WARNING  = new Color(210, 153, 34);
-    static final Color TEXT     = new Color(230, 237, 243);
-    static final Color MUTED    = new Color(110, 118, 129);
+    static final Color SUCCESS = new Color(63, 185, 80);
+    static final Color DANGER = new Color(248, 81, 73);
+    static final Color WARNING = new Color(210, 153, 34);
+    static final Color TEXT = new Color(230, 237, 243);
+    static final Color MUTED = new Color(110, 118, 129);
 
-    static final Font FONT_MONO  = new Font("Monospaced", Font.PLAIN, 12);
-    static final Font FONT_UI    = new Font("SansSerif",  Font.PLAIN, 13);
-    static final Font FONT_BOLD  = new Font("SansSerif",  Font.BOLD,  13);
-    static final Font FONT_SMALL = new Font("SansSerif",  Font.PLAIN, 11);
+    static final Font FONT_MONO = new Font("Monospaced", Font.PLAIN, 12);
+    static final Font FONT_UI = new Font("SansSerif", Font.PLAIN, 13);
+    static final Font FONT_BOLD = new Font("SansSerif", Font.BOLD, 13);
+    static final Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
 
     // ── State ─────────────────────────────────────────────────────────────────
     private final List<String> logLines = new ArrayList<>();
 
     // ── UI ────────────────────────────────────────────────────────────────────
     private JTabbedPane tabs;
-    private JTextArea   logArea;
+    private JTextArea logArea;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -80,7 +80,8 @@ public class DuplicateFinderGUI extends JFrame {
                 FONT_SMALL, MUTED);
 
         JPanel txt = Ui.panel(new GridLayout(2, 1, 0, 3));
-        txt.add(title); txt.add(sub);
+        txt.add(title);
+        txt.add(sub);
         p.add(txt, BorderLayout.WEST);
         return p;
     }
@@ -91,9 +92,9 @@ public class DuplicateFinderGUI extends JFrame {
         tp.setForeground(TEXT);
         tp.setFont(FONT_BOLD);
 
-        tp.addTab("🔍  Duplikate suchen",    new DuplicateTab(this));
-        tp.addTab("🔄  Ordner vergleichen",  new SyncTab(this));
-        tp.addTab("📋  Log",                 buildLogTab());
+        tp.addTab("🔍  Duplikate suchen", new DuplicateTab(this));
+        tp.addTab("🔄  Ordner vergleichen", new SyncTab(this));
+        tp.addTab("📋  Log", buildLogTab());
         return tp;
     }
 
@@ -114,7 +115,10 @@ public class DuplicateFinderGUI extends JFrame {
         p.add(sc, BorderLayout.CENTER);
 
         JButton btnClear = Ui.button("Log leeren", CARD, MUTED, 120, 32);
-        btnClear.addActionListener(e -> { logLines.clear(); logArea.setText(""); });
+        btnClear.addActionListener(e -> {
+            logLines.clear();
+            logArea.setText("");
+        });
         JPanel footer = Ui.panel(new FlowLayout(FlowLayout.RIGHT, 0, 8));
         footer.add(btnClear);
         p.add(footer, BorderLayout.SOUTH);
@@ -134,13 +138,13 @@ public class DuplicateFinderGUI extends JFrame {
         });
     }
 
-    // ── Entry Points ─────────────────────────────────────────────────────────
+    // ── Entry Point ──────────────────────────────────────────────────────────
 
     public static void launch() {
-        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
-        catch (Exception ignored) {}
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
         SwingUtilities.invokeLater(() -> new DuplicateFinderGUI().setVisible(true));
     }
-
-    public static void main(String[] args) { launch(); }
 }

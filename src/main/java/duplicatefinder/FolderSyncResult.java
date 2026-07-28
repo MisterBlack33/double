@@ -31,25 +31,12 @@ import java.util.List;
 public final class FolderSyncResult {
 
     public enum MatchStatus {
-        // ── Byte-basiert ──────────────────────────────────────────────────────
-        /** Fall 1: Name = Inhalt = Größe = → sicher löschbar. */
-        DUPLICATE,
-        /** Fälle 2, 5, 6: Inhalt gleich, aber Name oder Größe weichen ab. */
-        NEEDS_REVIEW,
-        /** Fall 3: Name + Größe gleich, Inhalt verschieden → Konflikt. */
-        CONFLICT,
-        /** Fälle 4, 7, 8: kein relevanter Treffer → wird nicht angezeigt. */
-        DIFFERENT,
+        DUPLICATE, NEEDS_REVIEW, CONFLICT, DIFFERENT,
 
-        // ── Visuell (nur Bilder, pHash) ───────────────────────────────────────
-        /** pHash-Distanz 0: visuell identisch, unterschiedliches Format/EXIF. */
-        VISUAL_IDENTICAL,
-        /** pHash-Distanz 1–5: fast identisch (Kompression, leichte Qualitätsunterschiede). */
-        VISUAL_NEAR_IDENTICAL,
-        /** pHash-Distanz 6–10: ähnlich (Helligkeit, Wasserzeichen, leichte Bearbeitung). */
-        VISUAL_SIMILAR,
-        /** pHash-Distanz 11–15: möglicherweise ähnlich (Zuschneiden, stärkere Bearbeitung). */
-        VISUAL_POSSIBLY_SIMILAR
+        /** Textdateien mit gleichem Namen, ungleichem Inhalt, aber geringer SimHash-Distanz. */
+        NEAR_DUPLICATE_TEXT,
+
+        VISUAL_IDENTICAL, VISUAL_NEAR_IDENTICAL, VISUAL_SIMILAR, VISUAL_POSSIBLY_SIMILAR
     }
 
     /** Ein Vergleichspaar: Quelldatei + passende Zieldatei + Bewertung. */

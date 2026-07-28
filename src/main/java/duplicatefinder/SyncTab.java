@@ -158,6 +158,7 @@ public class SyncTab extends JPanel {
         legend.add(legendDot(VISUAL_2, "Vis. fast identisch"));
         legend.add(legendDot(VISUAL_3, "Vis. ähnlich"));
         legend.add(legendDot(VISUAL_4, "Vis. mögl. ähnlich"));
+        legend.add(legendDot(new Color(46, 160, 130), "Text ähnlich"));
 
         lblSummary = Ui.label("", FONT_MONO, MUTED);
         JPanel topBar = Ui.panel(new BorderLayout());
@@ -394,6 +395,7 @@ public class SyncTab extends JPanel {
             case DUPLICATE               -> "Duplikat";
             case NEEDS_REVIEW            -> "Zu prüfen";
             case CONFLICT                -> "Konflikt";
+            case NEAR_DUPLICATE_TEXT     -> "Text ähnlich";     // NEU
             case VISUAL_IDENTICAL        -> "Vis. identisch";
             case VISUAL_NEAR_IDENTICAL   -> "Vis. fast id.";
             case VISUAL_SIMILAR          -> "Vis. ähnlich";
@@ -403,13 +405,13 @@ public class SyncTab extends JPanel {
     }
 
     private String caseLabel(FolderSyncResult.FileEntry fe) {
-        boolean nameEq = fe.getSourcePath().getFileName()
-                .equals(fe.getTargetPath().getFileName());
+        boolean nameEq = fe.getSourcePath().getFileName().equals(fe.getTargetPath().getFileName());
         boolean sizeEq = fe.getSourceSize() == fe.getTargetSize();
         return switch (fe.getStatus()) {
             case DUPLICATE               -> "#1";
             case NEEDS_REVIEW            -> nameEq ? "#2" : (sizeEq ? "#5" : "#6");
             case CONFLICT                -> "#3";
+            case NEAR_DUPLICATE_TEXT     -> "T1";               // NEU
             case VISUAL_IDENTICAL        -> "V0";
             case VISUAL_NEAR_IDENTICAL   -> "V1";
             case VISUAL_SIMILAR          -> "V2";
@@ -423,6 +425,7 @@ public class SyncTab extends JPanel {
             case "Duplikat"      -> DANGER;
             case "Zu prüfen"     -> WARNING;
             case "Konflikt"      -> new Color(210, 120, 40);
+            case "Text ähnlich"  -> new Color(46, 160, 130);    // NEU, Türkis
             case "Vis. identisch"-> VISUAL_1;
             case "Vis. fast id." -> VISUAL_2;
             case "Vis. ähnlich"  -> VISUAL_3;

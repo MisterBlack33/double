@@ -89,6 +89,7 @@ public class DuplicateDetector {
     private List<Path> filterBySize(List<Path> files) {
         Map<Long, List<Path>> bySize = new HashMap<>();
         for (Path f : files) {
+            if (IgnoredFiles.shouldIgnore(f)) continue;          // NEU
             long size = getSize(f);
             if (size >= 0) bySize.computeIfAbsent(size, k -> new ArrayList<>()).add(f);
         }

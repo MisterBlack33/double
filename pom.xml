@@ -29,7 +29,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>duplicatefinder.DuplicateFinder</mainClass>
+                            <mainClass>duplicatefinder.Launcher</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
