@@ -5,9 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-/**
- * CLI-Modus: java -jar duplicate-finder.jar &lt;Verzeichnispfad&gt;
- */
+/** CLI-Modus: java -jar duplicate-finder.jar &lt;Verzeichnispfad&gt; */
 public class DuplicateFinderCLI {
 
     public static void run(String[] args) {

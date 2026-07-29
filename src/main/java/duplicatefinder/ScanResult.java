@@ -17,15 +17,11 @@ public final class ScanResult {
     private final int  totalFilesScanned;
     private final long totalWastedBytes;
 
-    // ─────────────────────────────────────────────────────────────────────────
-
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned) {
         this.groups            = Collections.unmodifiableList(new ArrayList<>(groups));
         this.totalFilesScanned = totalFilesScanned;
         this.totalWastedBytes  = groups.stream().mapToLong(DuplicateGroup::wastedBytes).sum();
     }
-
-    // ── Getter ────────────────────────────────────────────────────────────────
 
     public List<DuplicateGroup> getGroups()           { return groups; }
     public int  getTotalFilesScanned()                { return totalFilesScanned; }
@@ -38,11 +34,7 @@ public final class ScanResult {
         return groups.stream().mapToInt(g -> g.getPaths().size() - 1).sum();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Eine Gruppe inhaltlich identischer Dateien.
-     */
+    /** Eine Gruppe inhaltlich identischer Dateien. */
     public static final class DuplicateGroup {
 
         private final String     hash;

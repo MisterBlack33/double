@@ -8,15 +8,10 @@ import java.util.*;
 
 /**
  * Haupt-GUI des Duplicate File Finders.
- *
- * Drei Tabs:
- *  1. Duplikate suchen  – Scannen, anzeigen, selektiv löschen
- *  2. Ordner vergleichen – zwei Ordner vergleichen, fehlende Dateien übertragen
- *  3. Log               – Protokoll aller Aktionen
+ * Drei Tabs: Duplikate suchen, Ordner vergleichen, Log.
  */
 public class DuplicateFinderGUI extends JFrame {
 
-    // ── Design-Tokens ─────────────────────────────────────────────────────────
     static final Color BG = new Color(13, 17, 23);
     static final Color SURFACE = new Color(22, 27, 34);
     static final Color CARD = new Color(30, 37, 48);
@@ -34,14 +29,10 @@ public class DuplicateFinderGUI extends JFrame {
     static final Font FONT_BOLD = new Font("SansSerif", Font.BOLD, 13);
     static final Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
 
-    // ── State ─────────────────────────────────────────────────────────────────
     private final List<String> logLines = new ArrayList<>();
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     private JTabbedPane tabs;
     private JTextArea logArea;
-
-    // ─────────────────────────────────────────────────────────────────────────
 
     public DuplicateFinderGUI() {
         super("Duplicate File Finder");
@@ -53,17 +44,12 @@ public class DuplicateFinderGUI extends JFrame {
         buildUI();
     }
 
-    // ── Aufbau ────────────────────────────────────────────────────────────────
-
     private void buildUI() {
         JPanel root = Ui.panel(new BorderLayout());
         root.setBorder(new EmptyBorder(20, 24, 20, 24));
-
         root.add(buildHeader(), BorderLayout.NORTH);
-
         tabs = buildTabs();
         root.add(tabs, BorderLayout.CENTER);
-
         setContentPane(root);
     }
 
@@ -71,8 +57,7 @@ public class DuplicateFinderGUI extends JFrame {
         JPanel p = Ui.panel(new BorderLayout());
         p.setBorder(new EmptyBorder(0, 0, 16, 0));
 
-        JLabel title = Ui.label("Duplicate File Finder",
-                new Font("Monospaced", Font.BOLD, 22), TEXT);
+        JLabel title = Ui.label("Duplicate File Finder", new Font("Monospaced", Font.BOLD, 22), TEXT);
         JLabel sub = Ui.label(
                 "SHA-256 · Dreistufige Analyse · Direkt löschen · Ordner synchronisieren",
                 FONT_SMALL, MUTED);
@@ -123,8 +108,6 @@ public class DuplicateFinderGUI extends JFrame {
         return p;
     }
 
-    // ── Logging (shared) ─────────────────────────────────────────────────────
-
     void log(String msg) {
         String line = "[" + java.time.LocalTime.now().toString().substring(0, 8) + "] " + msg;
         logLines.add(line);
@@ -136,12 +119,11 @@ public class DuplicateFinderGUI extends JFrame {
         });
     }
 
-    // ── Entry Point ──────────────────────────────────────────────────────────
-
     public static void launch() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {
+            // Fallback auf Standard-Look-and-Feel ist unkritisch.
         }
         SwingUtilities.invokeLater(() -> new DuplicateFinderGUI().setVisible(true));
     }

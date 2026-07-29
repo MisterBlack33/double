@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
  */
 public class DuplicateDetector {
 
-    private static final int BUFFER_SIZE  = 65_536;   // 64 KB I/O-Puffer
-    private static final int QUICK_BYTES  = 8_192;    // 8 KB für Quick-Hash
+    private static final int BUFFER_SIZE  = 65_536;
+    private static final int QUICK_BYTES  = 8_192;
 
     /**
      * Findet alle Duplikat-Gruppen in der übergebenen Dateiliste.
@@ -36,19 +36,16 @@ public class DuplicateDetector {
     public ScanResult findDuplicates(List<Path> files, BiConsumer<Integer, Integer> progressCallback)
             throws IOException {
 
-        // ── Stufe 1: Größen-Filter ────────────────────────────────────────────
         List<Path> candidates = filterBySize(files);
         if (candidates.isEmpty()) {
             return new ScanResult(Collections.emptyList(), files.size());
         }
 
-        // ── Stufe 2: Quick-Hash-Filter ────────────────────────────────────────
         candidates = filterByHash(candidates, true, null, candidates.size());
         if (candidates.isEmpty()) {
             return new ScanResult(Collections.emptyList(), files.size());
         }
 
-        // ── Stufe 3: Vollständiger Hash ───────────────────────────────────────
         int total = candidates.size();
         Map<String, List<Path>> byFullHash = new LinkedHashMap<>();
         int processed = 0;
@@ -65,7 +62,6 @@ public class DuplicateDetector {
             if (progressCallback != null) progressCallback.accept(processed, total);
         }
 
-        // ── Gruppen bauen ─────────────────────────────────────────────────────
         List<ScanResult.DuplicateGroup> groups = byFullHash.entrySet().stream()
                 .filter(e -> e.getValue().size() > 1)
                 .sorted(Comparator.comparingLong(e -> -getSize(e.getValue().get(0))))
@@ -83,13 +79,11 @@ public class DuplicateDetector {
         return findDuplicates(files, null);
     }
 
-    // ── Private Hilfsmethoden ─────────────────────────────────────────────────
-
-    /** Stufe 1: Nur Dateien behalten, die nicht die einzige ihrer Größe sind. */
+    /** Nur Dateien behalten, die nicht die einzige ihrer Größe sind. */
     private List<Path> filterBySize(List<Path> files) {
         Map<Long, List<Path>> bySize = new HashMap<>();
         for (Path f : files) {
-            if (IgnoredFiles.shouldIgnore(f)) continue;          // NEU
+            if (IgnoredFiles.shouldIgnore(f)) continue;
             long size = getSize(f);
             if (size >= 0) bySize.computeIfAbsent(size, k -> new ArrayList<>()).add(f);
         }
@@ -100,7 +94,7 @@ public class DuplicateDetector {
     }
 
     /**
-     * Stufe 2 & 3 kombiniert: Gruppiere nach Hash, behalte nur Gruppen mit ≥ 2 Einträgen.
+     * Gruppiere nach Hash, behalte nur Gruppen mit ≥ 2 Einträgen.
      *
      * @param quick wenn true, nur die ersten {@value #QUICK_BYTES} Bytes hashen
      */
