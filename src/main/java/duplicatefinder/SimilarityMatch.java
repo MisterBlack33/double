@@ -2,7 +2,7 @@ package duplicatefinder;
 
 import java.nio.file.Path;
 
-/** Ergebnis eines Nah-Duplikat-Vergleichs – ersetzt/erweitert die vorherige Version. */
+/** Ergebnis eines Nah-Duplikat-Vergleichs. */
 public final class SimilarityMatch {
 
     public enum Confidence { VERY_HIGH, HIGH, MEDIUM, LOW }

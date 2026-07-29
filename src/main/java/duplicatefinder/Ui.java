@@ -7,9 +7,7 @@ import java.awt.geom.RoundRectangle2D;
 
 import static duplicatefinder.DuplicateFinderGUI.*;
 
-/**
- * Kleine Factory-Klasse für konsistente UI-Komponenten.
- */
+/** Kleine Factory-Klasse für konsistente UI-Komponenten. */
 final class Ui {
 
     private Ui() {}
@@ -77,14 +75,6 @@ final class Ui {
         th.setFont(new Font("SansSerif", Font.BOLD, 11));
         th.setReorderingAllowed(false);
         th.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER));
-    }
-
-    /** Statuszeile mit Progress-Bar. */
-    static JPanel statusBar(JLabel lbl, JProgressBar pb) {
-        JPanel p = panel(new GridLayout(2, 1, 0, 4));
-        p.add(lbl);
-        p.add(pb);
-        return p;
     }
 
     static JProgressBar progressBar() {

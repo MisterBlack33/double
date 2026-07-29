@@ -5,8 +5,6 @@ import java.nio.file.Path;
 /** Ordnet einen Bild-pHash-Treffer einem konkreten {@link MatchReason} zu. */
 public final class ImageMatchClassifier {
 
-    private static final double RESOLUTION_RATIO_TOLERANCE = 0.02;
-
     private ImageMatchClassifier() {}
 
     public static MatchReason classify(Path a, Path b, int hammingDistance) {

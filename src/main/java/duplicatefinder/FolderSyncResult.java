@@ -5,37 +5,15 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Ergebnis eines Ordner-Vergleichs.
- *
- * <h3>Byte-Vergleich (alle Dateitypen)</h3>
- * <pre>
- *  Fall  Name  Inhalt  Größe  → Status
- *   1     =      =      =     DUPLICATE
- *   2     =      =      ≠     NEEDS_REVIEW
- *   3     =      ≠      =     CONFLICT
- *   4     =      ≠      ≠     DIFFERENT  (ignoriert)
- *   5     ≠      =      =     NEEDS_REVIEW
- *   6     ≠      =      ≠     NEEDS_REVIEW
- *   7     ≠      ≠      =     DIFFERENT  (ignoriert)
- *   8     ≠      ≠      ≠     DIFFERENT  (ignoriert)
- * </pre>
- *
- * <h3>Zusätzlich für Bilder (pHash)</h3>
- * <pre>
- *  VISUAL_IDENTICAL      pHash-Distanz 0    – gleich nach Format-Konversion / EXIF-Strip
- *  VISUAL_NEAR_IDENTICAL pHash-Distanz 1–5  – Kompressionsartefakte, andere JPEG-Qualität
- *  VISUAL_SIMILAR        pHash-Distanz 6–10 – Helligkeit, kleines Wasserzeichen
- *  VISUAL_POSSIBLY       pHash-Distanz 11–15– Zuschneiden, stärkere Bearbeitung
- * </pre>
+ * Ergebnis eines Ordner-Vergleichs (byte-basiert, plus optional pHash/SimHash).
+ * Siehe {@link FolderComparator} für die vollständige Fallunterscheidung.
  */
 public final class FolderSyncResult {
 
     public enum MatchStatus {
         DUPLICATE, NEEDS_REVIEW, CONFLICT, DIFFERENT,
-
         /** Textdateien mit gleichem Namen, ungleichem Inhalt, aber geringer SimHash-Distanz. */
         NEAR_DUPLICATE_TEXT,
-
         VISUAL_IDENTICAL, VISUAL_NEAR_IDENTICAL, VISUAL_SIMILAR, VISUAL_POSSIBLY_SIMILAR
     }
 

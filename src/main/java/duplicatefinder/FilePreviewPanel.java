@@ -11,10 +11,7 @@ import java.nio.file.Path;
 
 import static duplicatefinder.DuplicateFinderGUI.*;
 
-/**
- * Zeigt eine Inhaltsvorschau (Bild oder Text) für eine ausgewählte Datei an,
- * ohne dass die Datei extern geöffnet werden muss.
- */
+/** Zeigt eine Inhaltsvorschau (Bild oder Text) für eine ausgewählte Datei an. */
 public class FilePreviewPanel extends JPanel {
 
     private static final int THUMB_SIZE = 260;
