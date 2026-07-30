@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
+import java.util.Locale;
 
 import static duplicatefinder.gui.UiTheme.*;
 
@@ -91,9 +92,9 @@ public final class Ui {
     public static String fmtSize(long bytes) {
         if (bytes < 1_024)      return bytes + " B";
         double kb = bytes / 1_024.0;
-        if (kb < 1_024)         return String.format("%.1f KB", kb);
+        if (kb < 1_024)         return String.format(Locale.US, "%.1f KB", kb);
         double mb = kb / 1_024.0;
-        if (mb < 1_024)         return String.format("%.1f MB", mb);
-        return String.format("%.2f GB", mb / 1_024.0);
+        if (mb < 1_024)         return String.format(Locale.US, "%.1f MB", mb);
+        return String.format(Locale.US, "%.2f GB", mb / 1_024.0);
     }
 }

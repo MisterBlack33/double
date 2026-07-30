@@ -5,6 +5,7 @@ import duplicatefinder.scan.ScanResult;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 
 /** Gibt das {@link ScanResult} übersichtlich aus (Konsole oder beliebiger {@link PrintStream}). */
 public class ResultPrinter {
@@ -65,9 +66,9 @@ public class ResultPrinter {
     public static String formatSize(long bytes) {
         if (bytes < 1_024)            return bytes + " B";
         double kb = bytes / 1_024.0;
-        if (kb < 1_024)               return String.format("%.1f KB", kb);
+        if (kb < 1_024)               return String.format(Locale.US, "%.1f KB", kb);
         double mb = kb / 1_024.0;
-        if (mb < 1_024)               return String.format("%.1f MB", mb);
-        return String.format("%.2f GB", mb / 1_024.0);
+        if (mb < 1_024)               return String.format(Locale.US, "%.1f MB", mb);
+        return String.format(Locale.US, "%.2f GB", mb / 1_024.0);
     }
 }

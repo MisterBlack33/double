@@ -1,5 +1,7 @@
 package duplicatefinder.scan;
 
+import duplicatefinder.match.CopySuffixDetector;
+
 import java.nio.file.Path;
 import java.util.*;
 
@@ -41,8 +43,19 @@ public final class ScanResult {
 
         public DuplicateGroup(String hash, List<Path> paths, long fileSize) {
             this.hash     = hash;
-            this.paths    = Collections.unmodifiableList(new ArrayList<>(paths));
+            this.paths    = Collections.unmodifiableList(sortOriginalFirst(paths));
             this.fileSize = fileSize;
+        }
+
+        /**
+         * Original zuerst: 1) keine Kopie-Suffix ("foto.jpg" vor "foto (1).jpg"),
+         * 2) bei Gleichstand die ältere Datei (früheres Änderungsdatum).
+         */
+        private static List<Path> sortOriginalFirst(List<Path> paths) {
+            List<Path> sorted = new ArrayList<>(paths);
+            sorted.sort(Comparator.comparing(CopySuffixDetector::hasCopySuffix)
+                    .thenComparing(FileTimestamps::lastModifiedMillis));
+            return sorted;
         }
 
         public String     getHash()       { return hash; }

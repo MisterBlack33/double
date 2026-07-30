@@ -26,6 +26,8 @@ public class FilePreviewPanel extends JPanel {
     private final JLabel imageLabel = new JLabel("", SwingConstants.CENTER);
     private final JTextArea textArea = new JTextArea();
     private final JLabel placeholderLabel = new JLabel("", SwingConstants.CENTER);
+    private final JLabel videoThumbnailLabel = new JLabel("", SwingConstants.CENTER);
+    private Path currentVideoFile;
 
     public FilePreviewPanel() {
         super(new BorderLayout());
@@ -45,6 +47,8 @@ public class FilePreviewPanel extends JPanel {
         }
         if (PerceptualHasher.isImage(file)) {
             previewImage(file);
+        } else if (FileKindClassifier.classify(file) == FileKind.VIDEO) {
+            previewVideo(file);
         } else if (FileKindClassifier.classify(file) == FileKind.TEXT) {
             previewText(file);
         } else {
@@ -61,6 +65,32 @@ public class FilePreviewPanel extends JPanel {
         } catch (IOException e) {
             showPlaceholder("Bild nicht lesbar: " + file.getFileName());
         }
+    }
+
+    private void previewVideo(Path file) {
+        currentVideoFile = file;
+        videoThumbnailLabel.setIcon(null);
+        videoThumbnailLabel.setText("Lade Vorschau …");
+        cards.show(content, "video");
+
+        new VideoPreviewLoader(file,
+                img -> { videoThumbnailLabel.setText(null); videoThumbnailLabel.setIcon(new ImageIcon(scale(img))); },
+                (path, error) -> videoThumbnailLabel.setText("Kein Thumbnail verfügbar")
+        ).execute();
+    }
+
+    private void openCurrentVideo() {
+        if (currentVideoFile != null && !SystemFileOpener.open(currentVideoFile)) {
+            JOptionPane.showMessageDialog(this,
+                    "Video konnte nicht geöffnet werden: " + currentVideoFile.getFileName(),
+                    "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private String failureReason(Exception error) {
+        if (error == null) return "kein Frame extrahiert";
+        Throwable cause = error.getCause() != null ? error.getCause() : error;
+        return cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
     }
 
     private void previewText(Path file) {
@@ -109,6 +139,24 @@ public class FilePreviewPanel extends JPanel {
         textArea.setBackground(SURFACE);
         textArea.setForeground(TEXT);
         content.add(new JScrollPane(textArea), "text");
+
+        // NEU: Video-Card
+        JButton openButton = new JButton("▶ Video öffnen");
+        openButton.addActionListener(e -> openCurrentVideo());
+
+        videoThumbnailLabel.setOpaque(true);
+        videoThumbnailLabel.setBackground(SURFACE);
+        videoThumbnailLabel.setForeground(MUTED);
+
+        JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 8));
+        buttonWrap.setBackground(SURFACE);
+        buttonWrap.add(openButton);
+
+        JPanel videoPanel = new JPanel(new BorderLayout(0, 8));
+        videoPanel.setBackground(SURFACE);
+        videoPanel.add(videoThumbnailLabel, BorderLayout.CENTER);
+        videoPanel.add(buttonWrap, BorderLayout.SOUTH);
+        content.add(videoPanel, "video");
 
         placeholderLabel.setForeground(MUTED);
         placeholderLabel.setFont(FONT_UI);

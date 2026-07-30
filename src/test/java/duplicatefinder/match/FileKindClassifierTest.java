@@ -14,6 +14,11 @@ class FileKindClassifierTest {
     }
 
     @Test
+    void classifiesKnownVideoExtensionAsVideo() {
+        assertEquals(FileKind.VIDEO, FileKindClassifier.classify(Paths.get("clip.MP4")));
+    }
+
+    @Test
     void classifiesKnownTextExtensionAsText() {
         assertEquals(FileKind.TEXT, FileKindClassifier.classify(Paths.get("notes.MD")));
     }
