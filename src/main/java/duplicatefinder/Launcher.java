@@ -1,12 +1,6 @@
 package duplicatefinder;
 
-/**
- * Zentraler und einziger Einstiegspunkt der Anwendung.
- *
- * <p>Entscheidet anhand der Kommandozeilenargumente, ob die Anwendung im
- * GUI- oder im CLI-Modus gestartet wird. Keine andere Klasse im Projekt
- * besitzt eine eigene {@code main}-Methode.
- */
+/** Zentraler und einziger Einstiegspunkt der Anwendung (GUI- oder CLI-Modus). */
 public final class Launcher {
 
     private Launcher() {}

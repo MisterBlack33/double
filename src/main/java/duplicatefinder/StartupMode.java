@@ -1,5 +1,8 @@
 package duplicatefinder;
 
+import duplicatefinder.cli.DuplicateFinderCLI;
+import duplicatefinder.gui.DuplicateFinderGUI;
+
 /** Startmodus der Anwendung: grafische Oberfläche oder Kommandozeile. */
 enum StartupMode {
 
