@@ -13,11 +13,16 @@ public final class FileKindClassifier {
             "csv", "html", "css", "properties", "sql", "log"
     );
 
+    private static final Set<String> VIDEO_EXTENSIONS = Set.of(
+            "mp4", "mov", "avi", "mkv", "webm", "m4v", "wmv", "flv"
+    );
+
     private FileKindClassifier() {}
 
     public static FileKind classify(Path file) {
         String extension = extractExtension(file);
         if (PerceptualHasher.SUPPORTED_EXTENSIONS.contains(extension)) return FileKind.IMAGE;
+        if (VIDEO_EXTENSIONS.contains(extension))                      return FileKind.VIDEO;
         if (TEXT_EXTENSIONS.contains(extension))                       return FileKind.TEXT;
         return FileKind.BINARY;
     }
