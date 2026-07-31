@@ -14,16 +14,25 @@ import java.util.*;
 public final class ScanResult {
 
     private final List<DuplicateGroup> groups;
+    private final List<NameCollisionGroup> nameCollisions;
     private final int  totalFilesScanned;
     private final long totalWastedBytes;
 
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned) {
+        this(groups, totalFilesScanned, Collections.emptyList());
+    }
+
+    public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned,
+                      List<NameCollisionGroup> nameCollisions) {
         this.groups            = Collections.unmodifiableList(new ArrayList<>(groups));
+        this.nameCollisions    = Collections.unmodifiableList(new ArrayList<>(nameCollisions));
         this.totalFilesScanned = totalFilesScanned;
         this.totalWastedBytes  = groups.stream().mapToLong(DuplicateGroup::wastedBytes).sum();
     }
 
-    public List<DuplicateGroup> getGroups()           { return groups; }
+    public List<DuplicateGroup>     getGroups()          { return groups; }
+    public List<NameCollisionGroup> getNameCollisions()  { return nameCollisions; }
+    public boolean hasNameCollisions()                   { return !nameCollisions.isEmpty(); }
     public int  getTotalFilesScanned()                { return totalFilesScanned; }
     public int  getDuplicateGroupCount()              { return groups.size(); }
     public long getTotalWastedBytes()                 { return totalWastedBytes; }

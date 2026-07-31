@@ -6,6 +6,7 @@ import duplicatefinder.gui.FilePreviewPanel;
 import duplicatefinder.gui.Ui;
 import duplicatefinder.report.ResultPrinter;
 import duplicatefinder.scan.ScanResult;
+import duplicatefinder.scan.NameCollisionGroup;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -43,6 +44,7 @@ public class DuplicateTab extends JPanel {
     private List<Path>          currentGroupPaths;
     private final FilePreviewPanel previewPanel = new FilePreviewPanel();
     private DuplicateTabUi.Footer footer;
+    private List<NameCollisionGroup> nameCollisions = List.of();
 
     public DuplicateTab(DuplicateFinderGUI root) {
         this.root = root;
@@ -87,6 +89,7 @@ public class DuplicateTab extends JPanel {
         footer.deleteAll().addActionListener(e -> deleteAllMarked());
         footer.clear().addActionListener(e     -> resetAll());
         footer.scan().addActionListener(e      -> startScan());
+        footer.nameCollisions().addActionListener(e -> NameCollisionDialog.show(this, nameCollisions));
     }
 
     private void onFolderSelected(File folder) {
@@ -127,6 +130,9 @@ public class DuplicateTab extends JPanel {
         footer.progress().setValue(0);
         footer.progress().setIndeterminate(true);
         dropZone.setScanning(true);
+        footer.nameCollisions().setEnabled(false);
+        footer.nameCollisions().setText("Namenskollisionen (0)");
+        nameCollisions = List.of();
     }
 
     private void onScanFinished() {
@@ -139,6 +145,12 @@ public class DuplicateTab extends JPanel {
 
     private void onScanSuccess(ScanResult result) {
         lastResult = result;
+        nameCollisions = result.getNameCollisions();
+        footer.nameCollisions().setText("Namenskollisionen (" + nameCollisions.size() + ")");
+        footer.nameCollisions().setEnabled(!nameCollisions.isEmpty());
+        if (!nameCollisions.isEmpty()) {
+            root.log(nameCollisions.size() + " Namenskollision(en): gleicher Name, unterschiedlicher Inhalt");
+        }
         populateGroupTable();
         root.log("Scan fertig: " + result.getDuplicateGroupCount()
                 + " Gruppe(n), " + result.getRedundantFileCount() + " redundante Datei(en)");
@@ -259,6 +271,9 @@ public class DuplicateTab extends JPanel {
         footer.export().setEnabled(false);
         footer.markAll().setEnabled(false);
         footer.deleteAll().setEnabled(false);
+        footer.nameCollisions().setEnabled(false);
+        footer.nameCollisions().setText("Namenskollisionen (0)");
+        nameCollisions = List.of();
         setStatus("Bereit.");
         dropZone.reset();
     }

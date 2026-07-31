@@ -28,14 +28,16 @@ public class DuplicateDetector {
     public ScanResult findDuplicates(List<Path> files, BiConsumer<Integer, Integer> progressCallback)
             throws IOException {
 
+        List<NameCollisionGroup> nameCollisions = NameCollisionDetector.detect(files);
+
         List<Path> candidates = filterBySize(files);
         if (candidates.isEmpty()) {
-            return new ScanResult(Collections.emptyList(), files.size());
+            return new ScanResult(Collections.emptyList(), files.size(), nameCollisions);
         }
 
         candidates = filterByHash(candidates, true, null, candidates.size());
         if (candidates.isEmpty()) {
-            return new ScanResult(Collections.emptyList(), files.size());
+            return new ScanResult(Collections.emptyList(), files.size(), nameCollisions);
         }
 
         int total = candidates.size();
@@ -57,13 +59,10 @@ public class DuplicateDetector {
         List<ScanResult.DuplicateGroup> groups = byFullHash.entrySet().stream()
                 .filter(e -> e.getValue().size() > 1)
                 .sorted(Comparator.comparingLong(e -> -getSize(e.getValue().get(0))))
-                .map(e -> new ScanResult.DuplicateGroup(
-                        e.getKey(),
-                        e.getValue(),
-                        getSize(e.getValue().get(0))))
+                .map(e -> new ScanResult.DuplicateGroup(e.getKey(), e.getValue(), getSize(e.getValue().get(0))))
                 .collect(Collectors.toList());
 
-        return new ScanResult(groups, files.size());
+        return new ScanResult(groups, files.size(), nameCollisions);
     }
 
     public ScanResult findDuplicates(List<Path> files) throws IOException {
