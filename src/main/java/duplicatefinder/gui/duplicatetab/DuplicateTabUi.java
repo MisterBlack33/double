@@ -72,7 +72,8 @@ final class DuplicateTabUi {
 
     /** Bündelt die Footer-Komponenten, damit {@link DuplicateTab} sie mit einem Aufruf verdrahten kann. */
     record Footer(JPanel panel, JLabel status, JLabel marked, JProgressBar progress,
-                  JButton export, JButton markAll, JButton deleteAll, JButton clear, JButton scan) {}
+                  JButton export, JButton markAll, JButton deleteAll, JButton clear, JButton scan,
+                  JButton nameCollisions) {}
 
     static Footer buildFooter() {
         JPanel p = Ui.panel(new BorderLayout(12, 0));
@@ -86,16 +87,18 @@ final class DuplicateTabUi {
         p.add(left, BorderLayout.CENTER);
 
         JPanel buttons = Ui.panel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        JButton export    = Ui.button("Exportieren",              CARD,    MUTED,  120, 34);
-        JButton markAll   = Ui.button("Alle Duplikate markieren", WARNING, BG,     210, 34);
-        JButton deleteAll = Ui.button("Markierte löschen (0)",    DANGER,  TEXT,   190, 34);
-        JButton clear     = Ui.button("Zurücksetzen",             BORDER,  MUTED,  120, 34);
-        JButton scan      = Ui.button("Scan starten ▶",           ACCENT,  BG,     150, 34);
-        for (JButton b : new JButton[]{export, markAll, deleteAll, scan}) b.setEnabled(false);
+        JButton export         = Ui.button("Exportieren",              CARD,    MUTED,  120, 34);
+        JButton markAll        = Ui.button("Alle Duplikate markieren", WARNING, BG,     210, 34);
+        JButton deleteAll      = Ui.button("Markierte löschen (0)",    DANGER,  TEXT,   190, 34);
+        JButton clear          = Ui.button("Zurücksetzen",             BORDER,  MUTED,  120, 34);
+        JButton scan           = Ui.button("Scan starten ▶",           ACCENT,  BG,     150, 34);
+        JButton nameCollisions = Ui.button("Namenskollisionen (0)",    CARD,    WARNING, 190, 34);
+        for (JButton b : new JButton[]{export, markAll, deleteAll, scan, nameCollisions}) b.setEnabled(false);
 
-        buttons.add(export); buttons.add(markAll); buttons.add(deleteAll); buttons.add(clear); buttons.add(scan);
+        buttons.add(export); buttons.add(markAll); buttons.add(deleteAll);
+        buttons.add(nameCollisions); buttons.add(clear); buttons.add(scan);
         p.add(buttons, BorderLayout.EAST);
 
-        return new Footer(p, status, marked, progress, export, markAll, deleteAll, clear, scan);
+        return new Footer(p, status, marked, progress, export, markAll, deleteAll, clear, scan, nameCollisions);
     }
 }
