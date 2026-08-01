@@ -1,5 +1,7 @@
 package duplicatefinder.scan;
 
+import duplicatefinder.match.VisualDuplicateDetector;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -11,14 +13,18 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
- * Erkennt Duplikate anhand von Dateigröße und SHA-256-Hash.
+ * Erkennt Duplikate anhand von Dateigröße und SHA-256-Hash, ergänzt um eine
+ * visuelle Erkennung ({@link VisualDuplicateDetector}) für Bilder mit
+ * unterschiedlichem Byte-Inhalt (z. B. gleiches Foto als JPG und PNG).
  *
- * <h3>Dreistufiger Ansatz</h3>
+ * <h3>Dreistufiger Byte-Ansatz</h3>
  * <ol>
  *   <li><b>Größenvergleich</b> – Dateien einzigartiger Größe sofort ausschließen (kein I/O).</li>
  *   <li><b>Quick-Hash</b> – Nur die ersten 8 KB lesen; eliminiert weitere Nicht-Duplikate günstig.</li>
  *   <li><b>Vollständiger SHA-256</b> – Nur für verbleibende Kandidaten den kompletten Hash berechnen.</li>
  * </ol>
+ * Nur Dateien ohne exakten Byte-Treffer werden anschließend visuell verglichen,
+ * um doppelte Meldungen zu vermeiden.
  */
 public class DuplicateDetector {
 
@@ -31,15 +37,20 @@ public class DuplicateDetector {
         List<NameCollisionGroup> nameCollisions = NameCollisionDetector.detect(files);
 
         List<Path> candidates = filterBySize(files);
-        if (candidates.isEmpty()) {
-            return new ScanResult(Collections.emptyList(), files.size(), nameCollisions);
-        }
-
         candidates = filterByHash(candidates, true, null, candidates.size());
-        if (candidates.isEmpty()) {
-            return new ScanResult(Collections.emptyList(), files.size(), nameCollisions);
-        }
 
+        List<ScanResult.DuplicateGroup> groups = groupByFullHash(candidates, progressCallback);
+        List<VisualDuplicateGroup> visualDuplicates = detectVisualDuplicates(files, groups);
+
+        return new ScanResult(groups, files.size(), nameCollisions, visualDuplicates);
+    }
+
+    public ScanResult findDuplicates(List<Path> files) throws IOException {
+        return findDuplicates(files, null);
+    }
+
+    private List<ScanResult.DuplicateGroup> groupByFullHash(List<Path> candidates,
+                                                            BiConsumer<Integer, Integer> progressCallback) {
         int total = candidates.size();
         Map<String, List<Path>> byFullHash = new LinkedHashMap<>();
         int processed = 0;
@@ -51,22 +62,25 @@ public class DuplicateDetector {
             } catch (IOException e) {
                 System.err.printf("  Warnung: '%s' übersprungen – %s%n", file.getFileName(), e.getMessage());
             }
-
             processed++;
             if (progressCallback != null) progressCallback.accept(processed, total);
         }
 
-        List<ScanResult.DuplicateGroup> groups = byFullHash.entrySet().stream()
+        return byFullHash.entrySet().stream()
                 .filter(e -> e.getValue().size() > 1)
                 .sorted(Comparator.comparingLong(e -> -getSize(e.getValue().get(0))))
                 .map(e -> new ScanResult.DuplicateGroup(e.getKey(), e.getValue(), getSize(e.getValue().get(0))))
                 .collect(Collectors.toList());
-
-        return new ScanResult(groups, files.size(), nameCollisions);
     }
 
-    public ScanResult findDuplicates(List<Path> files) throws IOException {
-        return findDuplicates(files, null);
+    /** Vergleicht visuell nur Dateien, die noch in keiner Byte-Duplikat-Gruppe stecken. */
+    private List<VisualDuplicateGroup> detectVisualDuplicates(List<Path> files,
+                                                              List<ScanResult.DuplicateGroup> exactGroups) {
+        Set<Path> alreadyGrouped = exactGroups.stream()
+                .flatMap(g -> g.getPaths().stream())
+                .collect(Collectors.toSet());
+        List<Path> remaining = files.stream().filter(f -> !alreadyGrouped.contains(f)).toList();
+        return VisualDuplicateDetector.detect(remaining, null);
     }
 
     private List<Path> filterBySize(List<Path> files) {
@@ -110,7 +124,7 @@ public class DuplicateDetector {
                 int    bytesRead;
 
                 while (remaining > 0 &&
-                       (bytesRead = is.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
+                        (bytesRead = is.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
                     digest.update(buffer, 0, bytesRead);
                     remaining -= bytesRead;
                 }

@@ -8,31 +8,40 @@ import java.util.*;
 /**
  * Unveränderliches Ergebnisobjekt eines Scan-Durchlaufs.
  *
- * <p>Kapselt alle Duplikat-Gruppen und vorberechnete Statistiken,
+ * <p>Kapselt Byte-Duplikat-Gruppen, Namenskollisionen und visuelle Duplikate,
  * damit GUI und CLI dieselbe Datenquelle nutzen.
  */
 public final class ScanResult {
 
-    private final List<DuplicateGroup> groups;
-    private final List<NameCollisionGroup> nameCollisions;
+    private final List<DuplicateGroup>       groups;
+    private final List<NameCollisionGroup>   nameCollisions;
+    private final List<VisualDuplicateGroup> visualDuplicates;
     private final int  totalFilesScanned;
     private final long totalWastedBytes;
 
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned) {
-        this(groups, totalFilesScanned, Collections.emptyList());
+        this(groups, totalFilesScanned, Collections.emptyList(), Collections.emptyList());
     }
 
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned,
                       List<NameCollisionGroup> nameCollisions) {
+        this(groups, totalFilesScanned, nameCollisions, Collections.emptyList());
+    }
+
+    public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned,
+                      List<NameCollisionGroup> nameCollisions, List<VisualDuplicateGroup> visualDuplicates) {
         this.groups            = Collections.unmodifiableList(new ArrayList<>(groups));
         this.nameCollisions    = Collections.unmodifiableList(new ArrayList<>(nameCollisions));
+        this.visualDuplicates  = Collections.unmodifiableList(new ArrayList<>(visualDuplicates));
         this.totalFilesScanned = totalFilesScanned;
         this.totalWastedBytes  = groups.stream().mapToLong(DuplicateGroup::wastedBytes).sum();
     }
 
-    public List<DuplicateGroup>     getGroups()          { return groups; }
-    public List<NameCollisionGroup> getNameCollisions()  { return nameCollisions; }
-    public boolean hasNameCollisions()                   { return !nameCollisions.isEmpty(); }
+    public List<DuplicateGroup>       getGroups()           { return groups; }
+    public List<NameCollisionGroup>   getNameCollisions()   { return nameCollisions; }
+    public List<VisualDuplicateGroup> getVisualDuplicates() { return visualDuplicates; }
+    public boolean hasNameCollisions()                      { return !nameCollisions.isEmpty(); }
+    public boolean hasVisualDuplicates()                    { return !visualDuplicates.isEmpty(); }
     public int  getTotalFilesScanned()                { return totalFilesScanned; }
     public int  getDuplicateGroupCount()              { return groups.size(); }
     public long getTotalWastedBytes()                 { return totalWastedBytes; }
