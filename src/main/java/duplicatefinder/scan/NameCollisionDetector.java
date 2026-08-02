@@ -1,5 +1,9 @@
 package duplicatefinder.scan;
 
+import duplicatefinder.exclude.ExclusionStore;
+import duplicatefinder.exclude.GroupExclusionFilter;
+import duplicatefinder.exclude.NoOpExclusionStore;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -14,9 +18,9 @@ import java.util.regex.Pattern;
  * Erkennt Dateien mit gleichem (oder nur durch Kopie-Suffix abweichendem) Namen,
  * die unterschiedlichen Inhalt haben – unabhängig davon, in welchem Unterordner sie liegen.
  *
- * <p>Ergänzt {@link DuplicateDetector}: Während dieser inhaltsgleiche Dateien gruppiert,
- * meldet dieser Detector den umgekehrten Fall (z. B. zwei verschiedene Fotos, die beide
- * "x.jpg" heißen, oder "x.jpg" vs. "x (1).jpg" mit unterschiedlichem Inhalt).
+ * <p>Vom Nutzer als "verschieden" markierte Paare (siehe {@link ExclusionStore}) werden
+ * vor der Rückgabe aus den Gruppen entfernt, damit sie bei künftigen Scans nicht erneut
+ * gemeldet werden.
  */
 public final class NameCollisionDetector {
 
@@ -27,12 +31,17 @@ public final class NameCollisionDetector {
     private NameCollisionDetector() {}
 
     public static List<NameCollisionGroup> detect(List<Path> files) {
+        return detect(files, NoOpExclusionStore.INSTANCE);
+    }
+
+    public static List<NameCollisionGroup> detect(List<Path> files, ExclusionStore exclusions) {
         Map<String, List<Path>> byNormalizedName = groupByNormalizedName(files);
         List<NameCollisionGroup> collisions = new ArrayList<>();
 
         for (Map.Entry<String, List<Path>> group : byNormalizedName.entrySet()) {
-            if (group.getValue().size() < 2) continue;
-            NameCollisionGroup collision = buildIfConflicting(group.getKey(), group.getValue());
+            List<Path> remaining = GroupExclusionFilter.filter(group.getValue(), exclusions);
+            if (remaining.size() < 2) continue;
+            NameCollisionGroup collision = buildIfConflicting(group.getKey(), remaining);
             if (collision != null) collisions.add(collision);
         }
         return collisions;

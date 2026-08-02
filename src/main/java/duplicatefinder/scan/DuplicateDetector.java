@@ -1,5 +1,8 @@
 package duplicatefinder.scan;
 
+import duplicatefinder.exclude.ExclusionStore;
+import duplicatefinder.exclude.NoOpExclusionStore;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -25,10 +28,10 @@ public class DuplicateDetector {
     private static final int BUFFER_SIZE  = 65_536;
     private static final int QUICK_BYTES  = 8_192;
 
-    public ScanResult findDuplicates(List<Path> files, BiConsumer<Integer, Integer> progressCallback)
-            throws IOException {
+    public ScanResult findDuplicates(List<Path> files, BiConsumer<Integer, Integer> progressCallback,
+                                     ExclusionStore exclusions) throws IOException {
 
-        List<NameCollisionGroup> nameCollisions = NameCollisionDetector.detect(files);
+        List<NameCollisionGroup> nameCollisions = NameCollisionDetector.detect(files, exclusions);
 
         List<Path> candidates = filterBySize(files);
         if (candidates.isEmpty()) {
@@ -65,8 +68,13 @@ public class DuplicateDetector {
         return new ScanResult(groups, files.size(), nameCollisions);
     }
 
+    public ScanResult findDuplicates(List<Path> files, BiConsumer<Integer, Integer> progressCallback)
+            throws IOException {
+        return findDuplicates(files, progressCallback, NoOpExclusionStore.INSTANCE);
+    }
+
     public ScanResult findDuplicates(List<Path> files) throws IOException {
-        return findDuplicates(files, null);
+        return findDuplicates(files, null, NoOpExclusionStore.INSTANCE);
     }
 
     private List<Path> filterBySize(List<Path> files) {
@@ -110,7 +118,7 @@ public class DuplicateDetector {
                 int    bytesRead;
 
                 while (remaining > 0 &&
-                       (bytesRead = is.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
+                        (bytesRead = is.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
                     digest.update(buffer, 0, bytesRead);
                     remaining -= bytesRead;
                 }

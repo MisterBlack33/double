@@ -17,42 +17,67 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <twelvemonkeys.version>3.13.1</twelvemonkeys.version>
     </properties>
     <dependencies>
+        <!-- Java-eigenes ImageIO kann kein WebP dekodieren; dieser Reader-Plugin
+             registriert sich automatisch über den ImageIO-SPI-Mechanismus, sobald
+             er auf dem Klassenpfad liegt – keine Codeänderung in PerceptualHasher nötig. -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>${twelvemonkeys.version}</version>
+        </dependency>
+
+        <!-- Ersetzt/ergänzt den strengen JDK-JPEG-Decoder durch einen fehlertoleranteren
+             Reader (CMYK, ungewöhnliche SOF-Typen, teils beschädigte/verkettete Dateien). -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-jpeg</artifactId>
+            <version>${twelvemonkeys.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>RELEASE</version>
+            <version>5.14.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Erstellt ein ausführbares Fat-JAR (alle Abhängigkeiten inklusive) -->
+            <!--
+                WICHTIG: maven-shade-plugin statt maven-assembly-plugin.
+
+                ImageIO-Plugins (wie imageio-webp) registrieren sich über
+                META-INF/services/javax.imageio.spi.ImageReaderSpi. Mehrere
+                Abhängigkeiten tragen jeweils eine eigene Zeile in dieselbe
+                Datei ein. Der assembly-plugin kopiert Dateien nur (letzte
+                gewinnt) und würde diese SPI-Registrierung im Fat-JAR
+                zerstören – wodurch WebP trotz korrekter Dependency zur
+                Laufzeit nicht lesbar ist. ServicesResourceTransformer merged
+                diese Dateien stattdessen korrekt.
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.6.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>duplicatefinder.Launcher</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <finalName>duplicate-finder</finalName>
-                    <appendAssemblyId>false</appendAssemblyId>
-                </configuration>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <finalName>duplicate-finder</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>duplicatefinder.Launcher</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

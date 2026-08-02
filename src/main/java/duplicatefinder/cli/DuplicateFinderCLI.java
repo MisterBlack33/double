@@ -1,6 +1,8 @@
 package duplicatefinder.cli;
 
+import duplicatefinder.delete.DeletionExecutor;
 import duplicatefinder.report.ResultPrinter;
+import duplicatefinder.scan.CorruptedFileScanner;
 import duplicatefinder.scan.DuplicateDetector;
 import duplicatefinder.scan.FileScanner;
 import duplicatefinder.scan.ScanResult;
@@ -26,7 +28,13 @@ public class DuplicateFinderCLI {
         System.out.println();
 
         try {
-            List<Path> files     = new FileScanner().scan(rootDir);
+            List<Path> files = new FileScanner().scan(rootDir);
+            List<Path> unreadable = CorruptedFileScanner.findUnreadable(files);
+            if (!unreadable.isEmpty()) {
+                System.out.printf("%d nicht lesbare Datei(en) werden gelöscht:%n", unreadable.size());
+                DeletionExecutor.delete(unreadable, " [korrupt]", System.out::println);
+                files.removeAll(unreadable);
+            }
             System.out.printf("Gefundene Dateien: %d%n%n", files.size());
 
             ScanResult result    = new DuplicateDetector().findDuplicates(files);

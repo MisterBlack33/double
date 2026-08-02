@@ -1,17 +1,17 @@
 package duplicatefinder.gui.synctab;
 
 import duplicatefinder.folder.FolderSyncResult;
-import duplicatefinder.gui.DropZonePanel;
-import duplicatefinder.gui.DuplicateFinderGUI;
-import duplicatefinder.gui.FilePreviewPanel;
-import duplicatefinder.gui.Ui;
+import duplicatefinder.gui.*;
+import duplicatefinder.scan.FileScanner;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -115,6 +115,29 @@ public class SyncTab extends JPanel {
     }
 
     private void startCompare() {
+        setStatus("Ordner werden eingelesen …");
+        footer.compare().setEnabled(false);
+        footer.progress().setIndeterminate(true);
+        dropSource.setScanning(true);
+
+        try {
+            List<Path> srcFiles = new FileScanner().scan(dropSource.getFolder().toPath());
+            List<Path> tgtFiles = new FileScanner().scan(dropTarget.getFolder().toPath());
+            List<Path> allFiles = new ArrayList<>(srcFiles);
+            allFiles.addAll(tgtFiles);
+
+            new CorruptedCleanupWorker(root, allFiles, this::setStatus,
+                    deletedCount -> {
+                        if (deletedCount > 0) root.log(deletedCount + " korrupte Datei(en) entfernt.");
+                        runCompare();
+                    }
+            ).execute();
+        } catch (IOException e) {
+            onCompareError(e);
+        }
+    }
+
+    private void runCompare() {
         resultModel.setRowCount(0);
         lastResult = null;
         markedSource.clear(); markedTarget.clear();
