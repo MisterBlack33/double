@@ -1,13 +1,14 @@
 package duplicatefinder.gui.duplicatetab;
 
 import duplicatefinder.exclude.ExclusionStore;
-import duplicatefinder.scan.NameCollisionGroup;
+import duplicatefinder.scan.VisualDuplicateGroup;
 
 import javax.swing.JDialog;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -20,12 +21,13 @@ public final class NameCollisionDialog {
 
     private NameCollisionDialog() {}
 
-    public static void show(Component parent, List<NameCollisionGroup> groups,
+    public static void show(Component parent, List<VisualDuplicateGroup> groups,
                             ExclusionStore exclusions, Consumer<String> logger) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 "Namenskollisionen (unterschiedlicher Inhalt)");
         dialog.setModal(true);
         dialog.setSize(680, 720);
+        dialog.setMinimumSize(new Dimension(420, 320));   // ← hier einfügen
         dialog.setLocationRelativeTo(parent);
 
         var listPanel = new NameCollisionListBuilder(dialog, groups, exclusions, logger).build();

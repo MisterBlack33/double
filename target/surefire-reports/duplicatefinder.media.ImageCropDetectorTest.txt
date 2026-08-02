@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: duplicatefinder.media.ImageCropDetectorTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.081 s -- in duplicatefinder.media.ImageCropDetectorTest
