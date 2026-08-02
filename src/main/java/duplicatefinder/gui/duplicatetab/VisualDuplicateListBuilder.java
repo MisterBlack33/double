@@ -54,7 +54,6 @@ final class VisualDuplicateListBuilder {
         }
         root.revalidate();
         root.repaint();
-        dialog.pack();
     }
 
     private GridBagConstraints baseConstraints() {

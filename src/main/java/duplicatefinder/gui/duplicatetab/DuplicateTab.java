@@ -5,11 +5,14 @@ import duplicatefinder.gui.DropZonePanel;
 import duplicatefinder.gui.DuplicateFinderGUI;
 import duplicatefinder.gui.FilePreviewPanel;
 import duplicatefinder.gui.Ui;
-import duplicatefinder.report.DuplicateResultExporter;
+import duplicatefinder.exclude.ExclusionStore;
+import duplicatefinder.exclude.FileExclusionStore;
+import duplicatefinder.exclude.NoOpExclusionStore;
 import duplicatefinder.report.ResultPrinter;
 import duplicatefinder.scan.FileScanner;
 import duplicatefinder.scan.ScanResult;
 import duplicatefinder.scan.NameCollisionGroup;
+import duplicatefinder.scan.VisualDuplicateGroup;
 import duplicatefinder.scan.VisualDuplicateGroup;
 
 import javax.swing.*;
@@ -51,6 +54,7 @@ public class DuplicateTab extends JPanel {
     private DuplicateTabUi.Footer footer;
     private List<NameCollisionGroup>   nameCollisions   = List.of();
     private List<VisualDuplicateGroup> visualDuplicates = List.of();
+    private ExclusionStore exclusions = NoOpExclusionStore.INSTANCE;
 
     public DuplicateTab(DuplicateFinderGUI root) {
         this.root = root;
@@ -95,12 +99,15 @@ public class DuplicateTab extends JPanel {
         footer.deleteAll().addActionListener(e         -> deleteAllMarked());
         footer.clear().addActionListener(e             -> resetAll());
         footer.scan().addActionListener(e               -> startScan());
-        footer.nameCollisions().addActionListener(e     -> NameCollisionDialog.show(this, nameCollisions));
-        footer.visualDuplicates().addActionListener(e   -> VisualDuplicateDialog.show(this, visualDuplicates));
+        footer.nameCollisions().addActionListener(e   ->
+                NameCollisionDialog.show(this, nameCollisions, exclusions, root::log));
+        footer.visualDuplicates().addActionListener(e ->
+                VisualDuplicateDialog.show(this, visualDuplicates, exclusions, root::log));;
     }
 
     private void onFolderSelected(File folder) {
         footer.scan().setEnabled(true);
+        exclusions = new FileExclusionStore(folder.toPath().resolve(".duplicate-finder-exclusions.txt"));
         setStatus("Ordner: " + folder.getAbsolutePath());
         root.log("Ordner gewählt: " + folder.getAbsolutePath());
     }
@@ -186,7 +193,7 @@ public class DuplicateTab extends JPanel {
     }
 
     private void applyNameCollisions(ScanResult result) {
-        nameCollisions = result.getNameCollisions();
+        nameCollisions = result.getNameCollisions();   // NICHT getVisualDuplicates()
         footer.nameCollisions().setText("Namenskollisionen (" + nameCollisions.size() + ")");
         footer.nameCollisions().setEnabled(!nameCollisions.isEmpty());
         if (!nameCollisions.isEmpty()) {
@@ -194,9 +201,8 @@ public class DuplicateTab extends JPanel {
         }
     }
 
-    /** Bilder mit unterschiedlichem Byte-Inhalt, aber visuell (fast) identisch (pHash-Vergleich). */
     private void applyVisualDuplicates(ScanResult result) {
-        visualDuplicates = result.getVisualDuplicates();
+        visualDuplicates = result.getVisualDuplicates();   // NICHT getNameCollisions()
         footer.visualDuplicates().setText("Visuelle Duplikate (" + visualDuplicates.size() + ")");
         footer.visualDuplicates().setEnabled(!visualDuplicates.isEmpty());
         if (!visualDuplicates.isEmpty()) {
