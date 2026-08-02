@@ -1,44 +1,35 @@
 package duplicatefinder.gui.duplicatetab;
 
+import duplicatefinder.exclude.ExclusionStore;
 import duplicatefinder.scan.NameCollisionGroup;
 
-import javax.swing.JOptionPane;
+import javax.swing.JDialog;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
+import java.awt.BorderLayout;
 import java.awt.Component;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 
-/** Zeigt gefundene Namenskollisionen (gleicher Name, unterschiedlicher Inhalt) in einem Dialog an. */
-final class NameCollisionDialog {
-
-    private static final int MAX_GROUPS_SHOWN = 15;
+/**
+ * Interaktive Ansicht der Namenskollisionen (gleicher Name, unterschiedlicher Inhalt):
+ * Datei öffnen, einzeln löschen, oder als "verschieden" markieren (dauerhafter Ausschluss
+ * für künftige Scans). Aufbau siehe {@link NameCollisionListBuilder}.
+ */
+public final class NameCollisionDialog {
 
     private NameCollisionDialog() {}
 
-    static void show(Component parent, List<NameCollisionGroup> collisions) {
-        JOptionPane.showMessageDialog(parent, buildMessage(collisions),
-                "Namenskollisionen (unterschiedlicher Inhalt)", JOptionPane.WARNING_MESSAGE);
-    }
+    public static void show(Component parent, List<NameCollisionGroup> groups,
+                            ExclusionStore exclusions, Consumer<String> logger) {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
+                "Namenskollisionen (unterschiedlicher Inhalt)");
+        dialog.setModal(true);
+        dialog.setSize(680, 720);
+        dialog.setLocationRelativeTo(parent);
 
-    static String buildMessage(List<NameCollisionGroup> collisions) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(collisions.size()).append(" Namensgruppe(n) mit unterschiedlichem Inhalt gefunden:\n\n");
-
-        int shown = 0;
-        for (NameCollisionGroup group : collisions) {
-            if (shown++ >= MAX_GROUPS_SHOWN) {
-                sb.append("  … und weitere Gruppen\n");
-                break;
-            }
-            appendGroup(sb, group);
-        }
-        return sb.toString();
-    }
-
-    private static void appendGroup(StringBuilder sb, NameCollisionGroup group) {
-        sb.append(group.getFileName()).append(":\n");
-        for (Path path : group.getPaths()) {
-            sb.append("    ").append(path.toAbsolutePath()).append("\n");
-        }
-        sb.append("\n");
+        var listPanel = new NameCollisionListBuilder(dialog, groups, exclusions, logger).build();
+        dialog.add(new JScrollPane(listPanel), BorderLayout.CENTER);
+        dialog.setVisible(true);
     }
 }

@@ -1,10 +1,13 @@
 package duplicatefinder.gui.duplicatetab;
 
+import duplicatefinder.gui.CorruptedCleanupWorker;
 import duplicatefinder.gui.DropZonePanel;
 import duplicatefinder.gui.DuplicateFinderGUI;
 import duplicatefinder.gui.FilePreviewPanel;
 import duplicatefinder.gui.Ui;
+import duplicatefinder.report.DuplicateResultExporter;
 import duplicatefinder.report.ResultPrinter;
+import duplicatefinder.scan.FileScanner;
 import duplicatefinder.scan.ScanResult;
 import duplicatefinder.scan.NameCollisionGroup;
 import duplicatefinder.scan.VisualDuplicateGroup;
@@ -14,6 +17,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,9 +28,9 @@ import static duplicatefinder.gui.UiTheme.*;
 /**
  * Tab 1: Duplikate suchen, anzeigen, per Klick in der Vorschau prüfen und gruppenübergreifend löschen.
  *
- * <p>Workflow: Ordner wählen → Scan starten → Gruppen durchklicken und markieren → gesammelt löschen.
- * UI-Aufbau siehe {@link DuplicateTabUi}, Hintergrund-Scan siehe {@link DuplicateScanWorker},
- * Detailansicht siehe {@link DuplicateGroupDetailBuilder}, Export siehe {@link DuplicateResultExporter}.
+ * <p>Workflow: Ordner wählen → korrupte Dateien bereinigen → Scan starten → Gruppen durchklicken
+ * und markieren → gesammelt löschen. UI-Aufbau siehe {@link DuplicateTabUi}, Hintergrund-Scan siehe
+ * {@link DuplicateScanWorker}, Detailansicht siehe {@link DuplicateGroupDetailBuilder}.
  */
 public class DuplicateTab extends JPanel {
 
@@ -86,13 +90,13 @@ public class DuplicateTab extends JPanel {
     }
 
     private void wireFooterActions() {
-        footer.export().addActionListener(e    -> exportResults());
-        footer.markAll().addActionListener(e   -> markAllDuplicates());
-        footer.deleteAll().addActionListener(e -> deleteAllMarked());
-        footer.clear().addActionListener(e     -> resetAll());
-        footer.scan().addActionListener(e      -> startScan());
-        footer.nameCollisions().addActionListener(e -> NameCollisionDialog.show(this, nameCollisions));
-        footer.visualDuplicates().addActionListener(e -> VisualDuplicateDialog.show(this, visualDuplicates));
+        footer.export().addActionListener(e            -> exportResults());
+        footer.markAll().addActionListener(e           -> markAllDuplicates());
+        footer.deleteAll().addActionListener(e         -> deleteAllMarked());
+        footer.clear().addActionListener(e             -> resetAll());
+        footer.scan().addActionListener(e               -> startScan());
+        footer.nameCollisions().addActionListener(e     -> NameCollisionDialog.show(this, nameCollisions));
+        footer.visualDuplicates().addActionListener(e   -> VisualDuplicateDialog.show(this, visualDuplicates));
     }
 
     private void onFolderSelected(File folder) {
@@ -101,20 +105,35 @@ public class DuplicateTab extends JPanel {
         root.log("Ordner gewählt: " + folder.getAbsolutePath());
     }
 
+    /** Liest den Ordner, entfernt vorab nicht lesbare Dateien und startet danach den Duplikat-Scan. */
     private void startScan() {
-        prepareScanState();
         File folder = dropZone.getFolder();
-        root.log("Scan gestartet: " + folder.getAbsolutePath());
+        setStatus("Ordner wird eingelesen …");
+        footer.scan().setEnabled(false);
+        footer.progress().setIndeterminate(true);
 
-        new DuplicateScanWorker(folder,
-                this::setStatus,
+        try {
+            List<Path> files = new FileScanner().scan(folder.toPath());
+            new CorruptedCleanupWorker(root, files, this::setStatus,
+                    deletedCount -> {
+                        if (deletedCount > 0) root.log(deletedCount + " korrupte Datei(en) entfernt.");
+                        runDuplicateScan(folder);
+                    }
+            ).execute();
+        } catch (IOException e) {
+            onScanError(e);
+        }
+    }
+
+    private void runDuplicateScan(File folder) {
+        prepareScanState();
+        root.log("Scan gestartet: " + folder.getAbsolutePath());
+        new DuplicateScanWorker(folder, this::setStatus,
                 (done, total) -> {
                     footer.progress().setIndeterminate(false);
                     footer.progress().setValue((int) (done * 100.0 / Math.max(total, 1)));
                 },
-                this::onScanSuccess,
-                this::onScanError,
-                this::onScanFinished
+                this::onScanSuccess, this::onScanError, this::onScanFinished
         ).execute();
     }
 

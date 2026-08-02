@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: duplicatefinder.match.VisualDuplicateDetectorTest
--------------------------------------------------------------------------------
-Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.075 s -- in duplicatefinder.match.VisualDuplicateDetectorTest

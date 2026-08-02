@@ -1,10 +1,17 @@
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\cli\DuplicateFinderCLI.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\delete\CorruptedFileCleaner.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\delete\DeletionConfirmationDialog.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\delete\DeletionExecutor.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\exclude\ExclusionKey.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\exclude\ExclusionStore.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\exclude\FileExclusionStore.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\exclude\GroupExclusionFilter.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\exclude\NoOpExclusionStore.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\folder\FolderComparator.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\folder\FolderFileIndexer.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\folder\FolderSyncResult.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\folder\FolderVisualMatcher.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\CorruptedCleanupWorker.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\DropZonePainter.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\DropZonePanel.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\DuplicateFinderGUI.java
@@ -15,7 +22,9 @@ C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\duplicat
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\duplicatetab\DuplicateTabUi.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\duplicatetab\NameCollisionDialog.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\duplicatetab\VisualDuplicateDialog.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\duplicatetab\VisualDuplicateListBuilder.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\FilePreviewPanel.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\FileRowActions.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\synctab\SyncArrowGlyph.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\synctab\SyncCompareWorker.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\gui\synctab\SyncTab.java
@@ -45,6 +54,7 @@ C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\media\VideoF
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\media\VideoThumbnailExtractor.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\report\DuplicateResultExporter.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\report\ResultPrinter.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\CorruptedFileScanner.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\DuplicateDetector.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\FileScanner.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\FileTimestamps.java
