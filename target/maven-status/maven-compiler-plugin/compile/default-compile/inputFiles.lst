@@ -1,3 +1,6 @@
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\audio\AudioFingerprinter.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\audio\AudioQualityRanker.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\audio\TikaBitrateReader.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\cli\DuplicateFinderCLI.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\delete\CorruptedFileCleaner.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\delete\DeletionConfirmationDialog.java
@@ -41,6 +44,7 @@ C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\hash\Percept
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\hash\SequenceMatcher.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\hash\SimHasher.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\Launcher.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\match\AudioDuplicateDetector.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\match\CopySuffixDetector.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\match\FileKind.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\match\FileKindClassifier.java
@@ -55,6 +59,7 @@ C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\media\VideoF
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\media\VideoThumbnailExtractor.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\report\DuplicateResultExporter.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\report\ResultPrinter.java
+C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\AudioDuplicateGroup.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\CorruptedFileScanner.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\DuplicateDetector.java
 C:\Users\Anwender\IdeaProjects\double\src\main\java\duplicatefinder\scan\FileScanner.java

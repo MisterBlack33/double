@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: duplicatefinder.report.ResultPrinterTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in duplicatefinder.report.ResultPrinterTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in duplicatefinder.report.ResultPrinterTest
