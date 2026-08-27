@@ -1,3 +1,5 @@
+C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\audio\AudioFingerprinterTest.java
+C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\audio\AudioQualityRankerTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\delete\CorruptedFileCleanerTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\delete\DeletionConfirmationDialogTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\delete\DeletionExecutorTest.java
@@ -11,7 +13,9 @@ C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\hash\Percept
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\hash\SequenceMatcherTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\hash\SimHasherTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\hash\WebSupportTest.java
+C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\match\AudioDuplicateDetectorTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\match\CopySuffixDetectorTest.java
+C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\match\FileKindClassifierAudioTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\match\FileKindClassifierTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\match\ImageMatchClassifierTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\match\SimilarityMatchTest.java
@@ -22,6 +26,7 @@ C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\media\VideoT
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\report\DuplicateResultExporterTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\report\ResultPrinterTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\scan\CorruptedFileScannerTest.java
+C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\scan\DuplicateDetectorAudioTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\scan\DuplicateDetectorTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\scan\DuplicateDetectorVisualTest.java
 C:\Users\Anwender\IdeaProjects\double\src\test\java\duplicatefinder\scan\FileScannerTest.java
