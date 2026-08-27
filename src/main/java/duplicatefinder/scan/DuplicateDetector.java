@@ -2,6 +2,7 @@ package duplicatefinder.scan;
 
 import duplicatefinder.exclude.ExclusionStore;
 import duplicatefinder.exclude.NoOpExclusionStore;
+import duplicatefinder.match.AudioDuplicateDetector;
 import duplicatefinder.match.VisualDuplicateDetector;
 
 import java.io.IOException;
@@ -15,8 +16,8 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
- * Erkennt Byte-Duplikate (dreistufiges SHA-256-Verfahren) sowie ergänzend
- * visuell (fast) identische Bilder mit unterschiedlichem Byte-Inhalt.
+ * Erkennt Byte-Duplikate (dreistufiges SHA-256-Verfahren) sowie ergänzend visuell (fast)
+ * identische Bilder und inhaltsgleiche Audiodateien mit unterschiedlichem Byte-Inhalt.
  */
 public class DuplicateDetector {
 
@@ -27,9 +28,12 @@ public class DuplicateDetector {
                                      ExclusionStore exclusions) throws IOException {
         List<NameCollisionGroup> nameCollisions = NameCollisionDetector.detect(files, exclusions);
         List<ScanResult.DuplicateGroup> byteGroups = detectByteDuplicates(files, progressCallback);
-        List<VisualDuplicateGroup> visualDuplicates = detectVisualDuplicates(files, byteGroups);
+        List<Path> remaining = excludeByteMatched(files, byteGroups);
 
-        return new ScanResult(byteGroups, files.size(), nameCollisions, visualDuplicates);
+        List<VisualDuplicateGroup> visualDuplicates = VisualDuplicateDetector.detect(remaining, null);
+        List<AudioDuplicateGroup>  audioDuplicates  = AudioDuplicateDetector.detect(remaining, null);
+
+        return new ScanResult(byteGroups, files.size(), nameCollisions, visualDuplicates, audioDuplicates);
     }
 
     public ScanResult findDuplicates(List<Path> files, BiConsumer<Integer, Integer> progressCallback)
@@ -69,19 +73,13 @@ public class DuplicateDetector {
                 .collect(Collectors.toList());
     }
 
-    /** Bilder mit gleichem Motiv, aber unterschiedlichem Byte-Inhalt; bereits als Byte-Duplikat
-     *  erkannte Dateien werden ausgeschlossen, damit sie nicht doppelt gemeldet werden. */
-    private List<VisualDuplicateGroup> detectVisualDuplicates(
-            List<Path> files, List<ScanResult.DuplicateGroup> byteGroups) {
-        Set<Path> alreadyByteMatched = byteGroups.stream()
+    /** Bereits als Byte-Duplikat erkannte Dateien werden aus dem visuellen/Audio-Pass ausgeschlossen,
+     *  damit sie nicht doppelt gemeldet werden. */
+    private List<Path> excludeByteMatched(List<Path> files, List<ScanResult.DuplicateGroup> byteGroups) {
+        Set<Path> alreadyMatched = byteGroups.stream()
                 .flatMap(g -> g.getPaths().stream())
                 .collect(Collectors.toSet());
-
-        List<Path> remaining = files.stream()
-                .filter(f -> !alreadyByteMatched.contains(f))
-                .collect(Collectors.toList());
-
-        return VisualDuplicateDetector.detect(remaining, null);
+        return files.stream().filter(f -> !alreadyMatched.contains(f)).collect(Collectors.toList());
     }
 
     private List<Path> filterBySize(List<Path> files) {

@@ -4,6 +4,7 @@ package duplicatefinder.match;
 public enum FileKind {
     IMAGE,
     VIDEO,
+    AUDIO,
     TEXT,
     BINARY
 }

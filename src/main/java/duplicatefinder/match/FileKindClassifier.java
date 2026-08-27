@@ -17,12 +17,17 @@ public final class FileKindClassifier {
             "mp4", "mov", "avi", "mkv", "webm", "m4v", "wmv", "flv"
     );
 
+    private static final Set<String> AUDIO_EXTENSIONS = Set.of(
+            "mp3", "m4a", "wav", "flac", "ogg", "aac", "wma", "opus"
+    );
+
     private FileKindClassifier() {}
 
     public static FileKind classify(Path file) {
         String extension = extractExtension(file);
         if (PerceptualHasher.SUPPORTED_EXTENSIONS.contains(extension)) return FileKind.IMAGE;
         if (VIDEO_EXTENSIONS.contains(extension))                      return FileKind.VIDEO;
+        if (AUDIO_EXTENSIONS.contains(extension))                      return FileKind.AUDIO;
         if (TEXT_EXTENSIONS.contains(extension))                       return FileKind.TEXT;
         return FileKind.BINARY;
     }
