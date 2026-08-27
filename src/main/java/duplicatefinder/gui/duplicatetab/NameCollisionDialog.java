@@ -1,6 +1,7 @@
 package duplicatefinder.gui.duplicatetab;
 
 import duplicatefinder.exclude.ExclusionStore;
+import duplicatefinder.scan.NameCollisionGroup;
 import duplicatefinder.scan.VisualDuplicateGroup;
 
 import javax.swing.JDialog;
@@ -21,7 +22,7 @@ public final class NameCollisionDialog {
 
     private NameCollisionDialog() {}
 
-    public static void show(Component parent, List<VisualDuplicateGroup> groups,
+    public static void show(Component parent, List<NameCollisionGroup> groups,
                             ExclusionStore exclusions, Consumer<String> logger) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 "Namenskollisionen (unterschiedlicher Inhalt)");

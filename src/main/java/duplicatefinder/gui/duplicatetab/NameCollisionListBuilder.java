@@ -84,7 +84,12 @@ final class NameCollisionListBuilder {
 
     private JPanel buildFileRow(Path path, List<Path> groupPaths) {
         JPanel row = Ui.panel(new BorderLayout(6, 0));
-        row.add(Ui.label(path.toAbsolutePath().toString(), FONT_MONO, MUTED), BorderLayout.CENTER);
+        JLabel pathLabel = Ui.label(path.toAbsolutePath().toString(), FONT_MONO, MUTED);
+        pathLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        pathLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) { FileRowActions.open(dialog, path); }
+        });
+        row.add(pathLabel, BorderLayout.CENTER);
 
         JPanel actions = Ui.panel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         JButton open   = Ui.button("Öffnen", CARD, ACCENT, 80, 26);
