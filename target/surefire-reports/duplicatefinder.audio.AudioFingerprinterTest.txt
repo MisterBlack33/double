@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+Test set: duplicatefinder.audio.AudioFingerprinterTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.810 s <<< FAILURE! -- in duplicatefinder.audio.AudioFingerprinterTest
+duplicatefinder.audio.AudioFingerprinterTest.differentDurationTimeProfileHasHighDistance -- Time elapsed: 0.654 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: tempo-verändertes Zeitprofil sollte kein Duplikat sein ==> expected: <true> but was: <false>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+	at duplicatefinder.audio.AudioFingerprinterTest.differentDurationTimeProfileHasHighDistance(AudioFingerprinterTest.java:71)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1612)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1612)
+
