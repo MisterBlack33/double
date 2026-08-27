@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * Unveränderliches Ergebnisobjekt eines Scan-Durchlaufs.
  *
- * <p>Kapselt Byte-Duplikat-Gruppen, Namenskollisionen und visuelle Duplikate,
+ * <p>Kapselt Byte-Duplikat-Gruppen, Namenskollisionen, visuelle und Audio-Duplikate,
  * damit GUI und CLI dieselbe Datenquelle nutzen.
  */
 public final class ScanResult {
@@ -16,23 +16,31 @@ public final class ScanResult {
     private final List<DuplicateGroup>       groups;
     private final List<NameCollisionGroup>   nameCollisions;
     private final List<VisualDuplicateGroup> visualDuplicates;
+    private final List<AudioDuplicateGroup>  audioDuplicates;
     private final int  totalFilesScanned;
     private final long totalWastedBytes;
 
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned) {
-        this(groups, totalFilesScanned, Collections.emptyList(), Collections.emptyList());
+        this(groups, totalFilesScanned, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     }
 
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned,
                       List<NameCollisionGroup> nameCollisions) {
-        this(groups, totalFilesScanned, nameCollisions, Collections.emptyList());
+        this(groups, totalFilesScanned, nameCollisions, Collections.emptyList(), Collections.emptyList());
     }
 
     public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned,
                       List<NameCollisionGroup> nameCollisions, List<VisualDuplicateGroup> visualDuplicates) {
+        this(groups, totalFilesScanned, nameCollisions, visualDuplicates, Collections.emptyList());
+    }
+
+    public ScanResult(List<DuplicateGroup> groups, int totalFilesScanned,
+                      List<NameCollisionGroup> nameCollisions, List<VisualDuplicateGroup> visualDuplicates,
+                      List<AudioDuplicateGroup> audioDuplicates) {
         this.groups            = Collections.unmodifiableList(new ArrayList<>(groups));
         this.nameCollisions    = Collections.unmodifiableList(new ArrayList<>(nameCollisions));
         this.visualDuplicates  = Collections.unmodifiableList(new ArrayList<>(visualDuplicates));
+        this.audioDuplicates   = Collections.unmodifiableList(new ArrayList<>(audioDuplicates));
         this.totalFilesScanned = totalFilesScanned;
         this.totalWastedBytes  = groups.stream().mapToLong(DuplicateGroup::wastedBytes).sum();
     }
@@ -40,8 +48,10 @@ public final class ScanResult {
     public List<DuplicateGroup>       getGroups()           { return groups; }
     public List<NameCollisionGroup>   getNameCollisions()   { return nameCollisions; }
     public List<VisualDuplicateGroup> getVisualDuplicates() { return visualDuplicates; }
+    public List<AudioDuplicateGroup>  getAudioDuplicates()  { return audioDuplicates; }
     public boolean hasNameCollisions()                      { return !nameCollisions.isEmpty(); }
     public boolean hasVisualDuplicates()                    { return !visualDuplicates.isEmpty(); }
+    public boolean hasAudioDuplicates()                     { return !audioDuplicates.isEmpty(); }
     public int  getTotalFilesScanned()                { return totalFilesScanned; }
     public int  getDuplicateGroupCount()              { return groups.size(); }
     public long getTotalWastedBytes()                 { return totalWastedBytes; }
