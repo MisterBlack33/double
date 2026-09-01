@@ -4,29 +4,46 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * Erzeugt ein einfaches, zeit-normalisiertes Lautstärke-Profil einer Audiodatei (via ffmpeg).
- * Robust gegenüber Container/Bitrate (gleicher Song bleibt gleich laut zur gleichen relativen
- * Position), aber empfindlich gegenüber Tempo-/Pitch-Änderungen (z. B. Nightcore), da sich dabei
- * die zeitliche Zuordnung der Lautstärke-Verläufe verschiebt.
+ * Erzeugt ein Lautstärke-Profil einer Audiodatei in Buckets fester ABSOLUTER Länge (via ffmpeg).
+ * Robust gegenüber Container/Bitrate (gleicher Song bleibt gleich laut zur gleichen Zeitposition),
+ * aber empfindlich gegenüber Tempo-/Pitch-Änderungen (z. B. Nightcore): eine gestauchte Version hat
+ * automatisch weniger Buckets, wodurch {@link #distance} sie klar vom Original unterscheidet.
+ *
+ * <p>Wichtig: Buckets dürfen NICHT relativ zur Gesamtlänge skaliert werden (z. B. "Datei / 64
+ * Buckets") – sonst wäre das Profil tempo-invariant, da ein gleichmäßig beschleunigter Song
+ * dieselbe relative Lautstärke-Kurve behält und fälschlich als Duplikat erkannt würde.
  */
 public final class AudioFingerprinter {
 
     private static final int SAMPLE_RATE = 8_000;
-    private static final int PROFILE_BUCKETS = 64;
+    private static final double BUCKET_SECONDS = 0.5;
+    private static final int BUCKET_SAMPLES = (int) (SAMPLE_RATE * BUCKET_SECONDS);
 
     private AudioFingerprinter() {}
 
-    /** @return zeit-normalisiertes Profil mit {@link #PROFILE_BUCKETS} Werten in [0,1] */
+    /** @return Lautstärke-Profil mit einem Wert pro {@link #BUCKET_SECONDS}-Fenster, normiert auf [0,1] */
     public static double[] fingerprint(Path audio) throws IOException, InterruptedException {
         short[] samples = decodeToMonoPcm(audio);
         return toEnergyProfile(samples);
     }
 
-    /** Mittlere absolute Differenz zweier Profile gleicher Länge; 0 = identisch. */
+    /**
+     * Mittlere absolute Differenz zweier Profile, auf die längere Länge aufgefüllt (fehlende
+     * Buckets zählen als Stille = 0). Unterschiedliche Länge (= unterschiedliche Dauer) schlägt
+     * sich direkt in der Distanz nieder.
+     */
     public static double distance(double[] a, double[] b) {
+        int len = Math.max(a.length, b.length);
+        if (len == 0) return 0;
         double sum = 0;
-        for (int i = 0; i < PROFILE_BUCKETS; i++) sum += Math.abs(a[i] - b[i]);
-        return sum / PROFILE_BUCKETS;
+        for (int i = 0; i < len; i++) {
+            sum += Math.abs(valueAt(a, i) - valueAt(b, i));
+        }
+        return sum / len;
+    }
+
+    private static double valueAt(double[] profile, int index) {
+        return index < profile.length ? profile[index] : 0.0;
     }
 
     private static short[] decodeToMonoPcm(Path audio) throws IOException, InterruptedException {
@@ -48,13 +65,14 @@ public final class AudioFingerprinter {
     }
 
     private static double[] toEnergyProfile(short[] samples) {
-        double[] profile = new double[PROFILE_BUCKETS];
-        if (samples.length == 0) return profile;
+        if (samples.length == 0) return new double[0];
 
-        int bucketSize = Math.max(1, samples.length / PROFILE_BUCKETS);
-        for (int bucket = 0; bucket < PROFILE_BUCKETS; bucket++) {
-            profile[bucket] = rmsEnergy(samples, bucket * bucketSize,
-                    Math.min(samples.length, (bucket + 1) * bucketSize));
+        int bucketCount = (int) Math.ceil(samples.length / (double) BUCKET_SAMPLES);
+        double[] profile = new double[bucketCount];
+        for (int bucket = 0; bucket < bucketCount; bucket++) {
+            int start = bucket * BUCKET_SAMPLES;
+            int end = Math.min(samples.length, start + BUCKET_SAMPLES);
+            profile[bucket] = rmsEnergy(samples, start, end);
         }
         normalize(profile);
         return profile;
