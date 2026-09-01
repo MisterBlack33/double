@@ -5,12 +5,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /** Liest den Änderungszeitpunkt einer Datei für die Original/Duplikat-Sortierung. */
-final class FileTimestamps {
+public final class FileTimestamps {
 
     private FileTimestamps() {}
 
     /** Nicht lesbare Dateien gelten als "neuestmöglich", damit sie nie fälschlich als Original zählen. */
-    static long lastModifiedMillis(Path file) {
+    public static long lastModifiedMillis(Path file) {
         try {
             return Files.getLastModifiedTime(file).toMillis();
         } catch (IOException e) {

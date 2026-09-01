@@ -38,8 +38,12 @@ public final class AudioQualityRanker {
         return sorted;
     }
 
-    static boolean isLossless(Path file) {
+    public static boolean isLossless(Path file) {
         return LOSSLESS_EXTENSIONS.contains(extension(file));
+    }
+
+    public static int bitrateKbps(Path file) {
+        return TikaBitrateReader.read(file);
     }
 
     private static String extension(Path file) {
