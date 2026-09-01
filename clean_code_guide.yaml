@@ -1,0 +1,43 @@
+version: 1.0
+target: humans-and-ai
+strict_mode: true
+
+limits:
+  class_max_lines: 100
+  method_max_lines: 60
+  recommended_method_max_lines: 30
+  max_nesting_depth: 3
+  max_method_parameters: 4
+  max_line_length: 120
+  max_direct_dependencies: 5
+
+rules:
+  readability_first: true
+  deterministic_behavior: true
+  hidden_side_effects: false
+  dependency_injection_required: true
+  cyclic_dependencies_allowed: false
+
+forbidden_patterns:
+  - god_classes
+  - spaghetti_code
+  - copy_paste_code
+  - magic_numbers
+  - global_state
+  - mutable_static_variables
+  - nested_ternary_operators
+  - empty_catch_blocks
+  - dead_entry_points
+
+testing:
+  deterministic: true
+  independent: true
+  arrange_act_assert: true
+
+priorities:
+  - correctness
+  - security
+  - readability
+  - maintainability
+  - performance
+  - brevity
