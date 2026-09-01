@@ -84,7 +84,8 @@ public final class VisualDuplicateDetector {
     }
 
     private static VisualDuplicateGroup toGroup(List<VisualFingerprint> cluster) {
-        List<Path> paths = cluster.stream().map(VisualFingerprint::path).toList();
+        List<Path> paths = duplicatefinder.quality.OriginalOrderSorter.sort(
+                cluster.stream().map(VisualFingerprint::path).toList());
         return new VisualDuplicateGroup(paths, maxPairwiseDistance(cluster));
     }
 

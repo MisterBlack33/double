@@ -75,15 +75,8 @@ public final class ScanResult {
             this.fileSize = fileSize;
         }
 
-        /**
-         * Original zuerst: 1) keine Kopie-Suffix ("foto.jpg" vor "foto (1).jpg"),
-         * 2) bei Gleichstand die ältere Datei (früheres Änderungsdatum).
-         */
         private static List<Path> sortOriginalFirst(List<Path> paths) {
-            List<Path> sorted = new ArrayList<>(paths);
-            sorted.sort(Comparator.comparing(CopySuffixDetector::hasCopySuffix)
-                    .thenComparing(FileTimestamps::lastModifiedMillis));
-            return sorted;
+            return duplicatefinder.quality.OriginalOrderSorter.sort(paths);
         }
 
         public String     getHash()       { return hash; }

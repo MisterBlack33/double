@@ -71,7 +71,8 @@ public final class AudioDuplicateDetector {
     }
 
     private static AudioDuplicateGroup toGroup(List<Fingerprint> cluster) {
-        List<Path> paths = cluster.stream().map(Fingerprint::path).toList();
+        List<Path> paths = duplicatefinder.quality.OriginalOrderSorter.sort(
+                cluster.stream().map(Fingerprint::path).toList());
         return new AudioDuplicateGroup(paths, maxPairwiseDistance(cluster));
     }
 
