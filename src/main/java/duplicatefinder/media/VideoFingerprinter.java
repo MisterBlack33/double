@@ -11,7 +11,6 @@ import java.util.List;
 public final class VideoFingerprinter {
 
     private static final int SAMPLE_FRAMES = 12;
-    private static final String FFMPEG_BINARY = "ffmpeg";
 
     private VideoFingerprinter() {}
 
@@ -31,7 +30,7 @@ public final class VideoFingerprinter {
     }
 
     private static double probeDurationSeconds(Path video) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder("ffprobe", "-v", "error",
+        ProcessBuilder pb = new ProcessBuilder(FfmpegTools.ffprobe().toString(), "-v", "error",
                 "-show_entries", "format=duration", "-of", "csv=p=0", video.toString());
         Process process = pb.start();
         String output = new String(process.getInputStream().readAllBytes()).trim();
@@ -43,7 +42,7 @@ public final class VideoFingerprinter {
     private static Path extractFrame(Path video, Path tempDir, double timestamp, int index)
             throws IOException, InterruptedException {
         Path out = tempDir.resolve("frame_" + index + ".png");
-        ProcessBuilder pb = new ProcessBuilder(FFMPEG_BINARY, "-ss", String.valueOf(timestamp),
+        ProcessBuilder pb = new ProcessBuilder(FfmpegTools.ffmpeg().toString(), "-ss", String.valueOf(timestamp),
                 "-i", video.toString(), "-frames:v", "1", "-y", out.toString());
         pb.redirectErrorStream(true);
         Process process = pb.start();

@@ -1,6 +1,8 @@
 // src/main/java/duplicatefinder/quality/VideoDimensionReader.java
 package duplicatefinder.quality;
 
+import duplicatefinder.media.FfmpegTools;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -10,7 +12,7 @@ final class VideoDimensionReader {
     private VideoDimensionReader() {}
 
     static int[] read(Path video) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder("ffprobe", "-v", "error",
+        ProcessBuilder pb = new ProcessBuilder(FfmpegTools.ffprobe().toString(), "-v", "error",
                 "-select_streams", "v:0", "-show_entries", "stream=width,height",
                 "-of", "csv=s=x:p=0", video.toString());
         Process process = pb.start();

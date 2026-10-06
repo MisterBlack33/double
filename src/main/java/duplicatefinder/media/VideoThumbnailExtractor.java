@@ -11,8 +11,6 @@ public final class VideoThumbnailExtractor {
 
     private static final String PRIMARY_TIMESTAMP = "00:00:01";
     private static final String FALLBACK_TIMESTAMP = "00:00:00";
-    private static final String FFMPEG_BINARY = "ffmpeg";
-
     private VideoThumbnailExtractor() {}
 
     public static BufferedImage extractFrame(Path video) throws IOException, InterruptedException {
@@ -36,16 +34,10 @@ public final class VideoThumbnailExtractor {
 
     private static String runFfmpeg(Path video, Path outFrame, String timestamp)
             throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(FFMPEG_BINARY, "-i", video.toString(),
+        ProcessBuilder pb = new ProcessBuilder(FfmpegTools.ffmpeg().toString(), "-i", video.toString(),
                 "-ss", timestamp, "-frames:v", "1", "-y", outFrame.toString());
         pb.redirectErrorStream(true);
-        Process process;
-        try {
-            process = pb.start();
-        } catch (IOException e) {
-            throw new IOException("ffmpeg nicht gefunden – ist es installiert und im PATH? "
-                    + "Prüfen mit: where ffmpeg", e);
-        }
+        Process process = pb.start();
         String output = new String(process.getInputStream().readAllBytes());
         process.waitFor();
         return output;

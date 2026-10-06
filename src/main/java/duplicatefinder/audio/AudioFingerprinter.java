@@ -1,5 +1,7 @@
 package duplicatefinder.audio;
 
+import duplicatefinder.media.FfmpegTools;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -47,7 +49,7 @@ public final class AudioFingerprinter {
     }
 
     private static short[] decodeToMonoPcm(Path audio) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder("ffmpeg", "-i", audio.toString(),
+        ProcessBuilder pb = new ProcessBuilder(FfmpegTools.ffmpeg().toString(), "-i", audio.toString(),
                 "-ac", "1", "-ar", String.valueOf(SAMPLE_RATE), "-f", "s16le", "-loglevel", "error", "-");
         Process process = pb.start();
         byte[] raw = process.getInputStream().readAllBytes();
